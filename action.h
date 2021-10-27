@@ -76,6 +76,7 @@ struct action_s {
 	DEF_ATOMIC_HELPER_MUT(mutCAS)
 	/* error file */
 	const char *pszErrFile;
+	long maxSizeErrFile;
 	int fdErrFile;
 	pthread_mutex_t mutErrFile;
 	/* external stat file system */

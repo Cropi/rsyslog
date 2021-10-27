@@ -393,13 +393,13 @@ rsRetVal actionConstruct(action_t **ppThis)
 	action_t *pThis;
 
 	assert(ppThis != NULL);
-	
 	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
 	pThis->iResumeInterval = 30;
 	pThis->iResumeIntervalMax = 1800; /* max interval default is half an hour */
 	pThis->iResumeRetryCount = 0;
 	pThis->pszName = NULL;
 	pThis->pszErrFile = NULL;
+	pThis->maxSizeErrFile = 0;
 	pThis->pszExternalStateFile = NULL;
 	pThis->fdErrFile = -1;
 	pThis->bWriteAllMarkMsgs = 1;
@@ -1454,7 +1454,16 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, const rsRetVal ret,
 		char *const rendered = strdup((char*)fjson_object_to_json_string(etry));
 		if(rendered == NULL)
 			goto done;
+
 		const size_t toWrite = strlen(rendered) + 1;
+		long sizeErrFile = lseek(pThis->fdErrFile, 0, SEEK_CUR);
+		if (sizeErrFile < 0) {
+			DBGPRINTF("action %s: lseek failed, could not get size of the file", pThis->pszName);
+		}
+		else if (sizeErrFile + (long)toWrite > pThis->maxSizeErrFile) {
+			DBGPRINTF("action %s: maximum error file size reached", pThis->pszName);
+			goto done;
+		}
 		/* note: we use the '\0' inside the string to store a LF - we do not
 		 * otherwise need it and it safes us a copy/realloc.
 		 */
@@ -2048,6 +2057,8 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			continue; /* this is handled seperately during module select! */
 		} else if(!strcmp(pblk.descr[i].name, "action.errorfile")) {
 			pAction->pszErrFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "action.errorfilemaxsize")) {
+			pAction->maxSizeErrFile = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.externalstate.file")) {
 			pAction->pszExternalStateFile = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "action.writeallmarkmessages")) {
