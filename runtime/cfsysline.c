@@ -353,7 +353,7 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
-		if(loadConf->globals.abortOnIDResolutionFail) {
+		if(loadConf->globals.abortOnIDResolutionFail) { // OK
 			fprintf(stderr, "could not extract group name: %s\n", (char*)szName);
 			exit(1); /* good exit */
 		} else {
@@ -380,7 +380,7 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 			LogError(0, RS_RET_NOT_FOUND, "ID for group '%s' could not be found", szName);
 		}
 		iRet = RS_RET_NOT_FOUND;
-		if(loadConf->globals.abortOnIDResolutionFail) {
+		if(loadConf->globals.abortOnIDResolutionFail) { // OK
 			fprintf(stderr, "ID for group '%s' could not be found or error\n", szName);
 			exit(1); /* good exit */
 		}
@@ -418,7 +418,7 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
-		if(loadConf->globals.abortOnIDResolutionFail) {
+		if(loadConf->globals.abortOnIDResolutionFail) { // OK
 			fprintf(stderr, "could not extract user name: %s\n", (char*)szName);
 			exit(1); /* good exit */
 		} else {
@@ -430,7 +430,7 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	getpwnam_r((char*)szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
 
 	if(ppwBuf == NULL) {
-		if(loadConf->globals.abortOnIDResolutionFail) {
+		if(loadConf->globals.abortOnIDResolutionFail) { // OK
 			fprintf(stderr, "ID for user '%s' could not be found or error\n", (char*)szName);
 			exit(1); /* good exit */
 		} else {

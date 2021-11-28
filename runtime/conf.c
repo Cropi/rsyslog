@@ -183,7 +183,7 @@ doNameLine(uchar **pp, void* pVal)
 	
 	switch(eDir) {
 		case DIR_TEMPLATE:
-			tplAddLine(loadConf, szName, &p);
+			tplAddLine(loadConf, szName, &p); // OK
 			break;
 		case DIR_OUTCHANNEL:
 			ochAddLine(szName, &p);

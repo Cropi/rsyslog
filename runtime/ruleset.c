@@ -191,7 +191,7 @@ DEFFUNC_llExecFunc(doActivateRulesetQueues)
 rsRetVal
 activateRulesetQueues(void)
 {
-	llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
+	llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL); // OK
 	return RS_RET_OK;
 }
 
@@ -252,7 +252,7 @@ execCallIndirect(struct cnfstmt *const __restrict__ stmt,
 
 	cnfexprEval(stmt->d.s_call_ind.expr, &result, pMsg, pWti);
 	uchar *const rsName = (uchar*) var2CString(&result, &bMustFree);
-	const rsRetVal localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
+	const rsRetVal localRet = rulesetGetRuleset(runConf, &pRuleset, rsName); //loadConf->runConf
 	if(localRet != RS_RET_OK) {
 		/* in that case, we accept that a NOP will "survive" */
 		LogError(0, RS_RET_RULESET_NOT_FOUND, "error: CALL_INDIRECT: "
@@ -656,7 +656,7 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pWti->pbShutdownImmediate) ; ++i) {
 		pMsg = pBatch->pElem[i].pMsg;
 		DBGPRINTF("processBATCH: next msg %d: %.128s\n", i, pMsg->pszRawMsg);
-		pRuleset = (pMsg->pRuleset == NULL) ? ourConf->rulesets.pDflt : pMsg->pRuleset;
+		pRuleset = (pMsg->pRuleset == NULL) ? runConf->rulesets.pDflt : pMsg->pRuleset; // our -> run
 		localRet = scriptExec(pRuleset->root, pMsg, pWti);
 		/* the most important case here is that processing may be aborted
 		 * due to pbShutdownImmediate, in which case we MUST NOT flag this
@@ -1008,7 +1008,7 @@ finalize_it:
 static rsRetVal
 rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
 {
-	return doRulesetCreateQueue(ourConf, pNewVal);
+	return doRulesetCreateQueue(ourConf, pNewVal); // OK now
 }
 
 /* Add a ruleset specific parser to the ruleset. Note that adding the first
@@ -1050,7 +1050,7 @@ finalize_it:
 static rsRetVal
 rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
 {
-	return doRulesetAddParser(ourConf->rulesets.pCurr, pName);
+	return doRulesetAddParser(loadConf->rulesets.pCurr, pName); // OK NOW
 }
 
 
@@ -1079,7 +1079,7 @@ rulesetProcessCnf(struct cnfobj *o)
 	nameIdx = cnfparamGetIdx(&rspblk, "name");
 	rsName = (uchar*)es_str2cstr(pvals[nameIdx].val.d.estr, NULL);
 	
-	localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
+	localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName); // OK
 	if(localRet == RS_RET_OK) {
 		LogError(0, RS_RET_RULESET_EXISTS,
 			"error: ruleset '%s' specified more than once",
@@ -1095,7 +1095,7 @@ rulesetProcessCnf(struct cnfobj *o)
 		rulesetDestruct(&pRuleset);
 		ABORT_FINALIZE(localRet);
 	}
-	if((localRet = rulesetConstructFinalize(loadConf, pRuleset)) != RS_RET_OK) {
+	if((localRet = rulesetConstructFinalize(loadConf, pRuleset)) != RS_RET_OK) { // OK
 		rulesetDestruct(&pRuleset);
 		ABORT_FINALIZE(localRet);
 	}

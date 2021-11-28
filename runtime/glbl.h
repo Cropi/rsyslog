@@ -51,7 +51,7 @@ extern stdlog_channel_t stdlog_hdl;
 
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
-	uchar* (*GetWorkDir)(void);
+	uchar* (*GetWorkDir)(rsconf_t *cnf);
 	int (*GetMaxLine)(void);
 #define SIMP_PROP(name, dataType) \
 	dataType (*Get##name)(void); \
@@ -152,7 +152,7 @@ void glblProcessTimezone(struct cnfobj *o);
 void glblProcessMainQCnf(struct cnfobj *o);
 void glblDestructMainqCnfObj(void);
 rsRetVal glblDoneLoadCnf(void);
-const uchar * glblGetWorkDirRaw(void);
+const uchar * glblGetWorkDirRaw(rsconf_t *cnf);
 tzinfo_t* glblFindTimezoneInfo(char *id);
 int GetGnuTLSLoglevel(void);
 int glblGetMaxLine(void);

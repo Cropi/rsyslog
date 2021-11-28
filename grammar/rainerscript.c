@@ -934,7 +934,7 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 
 	if(resultBuf == NULL) {
 		if(e != 0) {
-			if(loadConf->globals.abortOnIDResolutionFail) {
+			if(loadConf->globals.abortOnIDResolutionFail) { //OK
 				fprintf(stderr, "parameter '%s': error to "
 				"obtaining group id for '%s'", param->name, cstr);
 				exit(1); /* good exit */
@@ -973,7 +973,7 @@ doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
 	const int err_no = getpwnam_r(cstr, &wrkBuf, stringBuf, sizeof(stringBuf), &resultBuf);
 	if(resultBuf == NULL) {
 		rs_strerror_r((err_no == 0) ? ENOENT : errno, errStr, sizeof(errStr));
-		if(loadConf->globals.abortOnIDResolutionFail) {
+		if(loadConf->globals.abortOnIDResolutionFail) { // OK
 			fprintf(stderr, "parameter '%s': ID for user '%s' could not "
 			  "be found: %s", param->name, cstr, errStr);
 			exit(1); /* good exit */
@@ -3738,7 +3738,7 @@ initFunc_exec_template(struct cnffunc *func)
 	}
 
 	tplName = es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
-	func->funcdata = tplFind(ourConf, tplName, strlen(tplName));
+	func->funcdata = tplFind(loadConf, tplName, strlen(tplName)); // ourConf->loadConf as it is used only in init phase
 	if(func->funcdata == NULL) {
 		parser_errmsg("exec_template(): template '%s' could not be found", tplName);
 		FINALIZE;
@@ -4734,7 +4734,7 @@ cnfstmtNewLegaAct(char *actline)
 	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL)
 		goto done;
 	cnfstmt->printable = (uchar*)strdup((char*)actline);
-	localRet = cflineDoAction(loadConf, (uchar**)&actline, &cnfstmt->d.act);
+	localRet = cflineDoAction(loadConf, (uchar**)&actline, &cnfstmt->d.act); // OK
 	if(localRet != RS_RET_OK) {
 		parser_errmsg("%s occured in file '%s' around line %d",
 			      (localRet == RS_RET_OK_WARN) ? "warnings" : "errors",
@@ -5254,7 +5254,7 @@ cnfstmtOptimizeCall(struct cnfstmt *stmt)
 	uchar *rsName;
 
 	rsName = (uchar*) es_str2cstr(stmt->d.s_call.name, NULL);
-	localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
+	localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName); // OK
 	if(localRet != RS_RET_OK) {
 		/* in that case, we accept that a NOP will "survive" */
 		parser_errmsg("ruleset '%s' cannot be found\n", rsName);
@@ -5276,6 +5276,7 @@ done:
 }
 /* (recursively) optimize a statement */
 struct cnfstmt *
+
 cnfstmtOptimize(struct cnfstmt *root)
 {
 	struct cnfstmt *stmt;

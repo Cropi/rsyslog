@@ -67,6 +67,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(statsobj)
 
 struct modConfData_s {
+	rsconf_t *pConf;	/* our overall config object */
 	int bIgnPrevMsg;
 };
 
@@ -141,6 +142,9 @@ struct journalContext_s { /* structure encapsulating all the journald_API-relate
 	char *cursor; /* should point to last valid journald entry we processed */
 };
 static struct journalContext_s journalContext = {NULL, 0, 1, NULL};
+
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for run process */
 
 #define J_PROCESS_PERIOD 1024  /* Call sd_journal_process() every 1,024 records */
 
@@ -577,12 +581,12 @@ persistJournalState(void)
 		}
 		/* In order to guarantee physical write we need to force parent sync as well */
 		DIR *wd;
-		if (!(wd = opendir((char *)glbl.GetWorkDir()))) {
-			LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to open '%s' directory", glbl.GetWorkDir());
+		if (!(wd = opendir((char *)glbl.GetWorkDir(runModConf->pConf)))) {
+			LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to open '%s' directory", glbl.GetWorkDir(runModConf->pConf));
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 		if (fsync(dirfd(wd)) != 0) {
-			LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", glbl.GetWorkDir());
+			LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", glbl.GetWorkDir(runModConf->pConf));
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 
@@ -884,6 +888,8 @@ ENDrunInput
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->pConf = pConf;
 	bLegacyCnfModGlobalsPermitted = 1;
 
 	cs.bIgnoreNonValidStatefile = 1;
@@ -906,7 +912,7 @@ CODESTARTendCnfLoad
 	/* bad trick to handle old and new style config all in old-style var */
 	if(cs.stateFile != NULL && cs.stateFile[0] != '/') {
 		char *new_stateFile;
-		if (-1 == asprintf(&new_stateFile, "%s/%s", (char *)glbl.GetWorkDir(), cs.stateFile)) {
+		if (-1 == asprintf(&new_stateFile, "%s/%s", (char *)glbl.GetWorkDir(loadModConf->pConf), cs.stateFile)) {
 			LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
@@ -924,6 +930,7 @@ ENDcheckCnf
 
 BEGINactivateCnf
 CODESTARTactivateCnf
+	runModConf = pModConf;
 
 	/* support statistic gathering */
 	CHKiRet(statsobj.Construct(&(statsCounter.stats)));

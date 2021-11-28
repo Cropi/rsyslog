@@ -77,6 +77,7 @@ struct globals_s {
 	int abortOnIDResolutionFail;
 	int umask;		/* umask to use */
 	uchar *pszConfDAGFile;	/* name of config DAG file, non-NULL means generate one */
+	uchar *pszWorkDir;
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

@@ -487,7 +487,7 @@ MsgSetRulesetByName(smsg_t * const pMsg, cstr_t *const rulesetName)
 {
 	uchar *const rs_name = rsCStrGetSzStrNoNULL(rulesetName);
 	const rsRetVal localRet =
-		 rulesetGetRuleset(runConf, &(pMsg->pRuleset), rs_name);
+		 rulesetGetRuleset(runConf, &(pMsg->pRuleset), rs_name); // LETS OK
 
 	if(localRet != RS_RET_OK) {
 		LogError(0, localRet, "msg: ruleset '%s' could not be found and could not "

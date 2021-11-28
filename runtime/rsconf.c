@@ -163,6 +163,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
 	pThis->actions.nbrActions = 0;
+	pThis->globals.pszWorkDir = NULL;
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
@@ -242,8 +243,10 @@ CODESTARTobjDestruct(rsconf)
 	perctileBucketsDestruct();
 	free(pThis->globals.mainQ.pszMainMsgQFName);
 	free(pThis->globals.pszConfDAGFile);
+	free(pThis->globals.pszWorkDir);
 	lookupDestroyCnf();
 	llDestroy(&(pThis->rulesets.llRulesets));
+	ochDeleteAll();
 ENDobjDestruct(rsconf)
 
 
@@ -296,8 +299,8 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
-	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir());
-	ochPrintList();
+	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir(pThis));
+	ochPrintList(pThis);
 	dbgprintf("Modules used in this configuration:\n");
 	for(modNode = pThis->modules.root ; modNode != NULL ; modNode = modNode->next) {
 		dbgprintf("    %s\n", module.GetName(modNode->pMod));
@@ -334,7 +337,7 @@ parserProcessCnf(struct cnfobj *o)
 
 	paramIdx = cnfparamGetIdx(&parserpblk, "type");
 	cnfModName = (uchar*)es_str2cstr(pvals[paramIdx].val.d.estr, NULL);
-	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_PARSER)) == NULL) {
+	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_PARSER)) == NULL) { //OK
 		LogError(0, RS_RET_MOD_UNKNOWN, "parser module name '%s' is unknown", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
 	}
@@ -373,7 +376,7 @@ inputProcessCnf(struct cnfobj *o)
 	cnfparamsPrint(&inppblk, pvals);
 	typeIdx = cnfparamGetIdx(&inppblk, "type");
 	cnfModName = (uchar*)es_str2cstr(pvals[typeIdx].val.d.estr, NULL);
-	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_IN)) == NULL) {
+	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_IN)) == NULL) { // OK
 		LogError(0, RS_RET_MOD_UNKNOWN, "input module name '%s' is unknown", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
 	}
@@ -510,7 +513,7 @@ cnfDoObj(struct cnfobj *const o)
 void cnfDoScript(struct cnfstmt *script)
 {
 	dbgprintf("cnf:global:script\n");
-	ruleset.AddScript(ruleset.GetCurrent(loadConf), script);
+	ruleset.AddScript(ruleset.GetCurrent(loadConf), script); // OK
 }
 
 void cnfDoCfsysline(char *ln)
@@ -548,13 +551,13 @@ void cnfDoBSDHost(char *ln)
  * if something goes wrong, the function never returns
  */
 static
-rsRetVal doDropPrivGid(void)
+rsRetVal doDropPrivGid(rsconf_t *cnf)
 {
 	int res;
 	uchar szBuf[1024];
 	DEFiRet;
 
-	if(!ourConf->globals.gidDropPrivKeepSupplemental) {
+	if(!cnf->globals.gidDropPrivKeepSupplemental) {
 		res = setgroups(0, NULL); /* remove all supplemental group IDs */
 		if(res) {
 			LogError(errno, RS_RET_ERR_DROP_PRIV,
@@ -563,15 +566,15 @@ rsRetVal doDropPrivGid(void)
 		}
 		DBGPRINTF("setgroups(0, NULL): %d\n", res);
 	}
-	res = setgid(ourConf->globals.gidDropPriv);
+	res = setgid(cnf->globals.gidDropPriv);
 	if(res) {
 		LogError(errno, RS_RET_ERR_DROP_PRIV,
-				"could not set requested group id %d", ourConf->globals.gidDropPriv);
+				"could not set requested group id %d", cnf->globals.gidDropPriv);
 		ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 	}
-	DBGPRINTF("setgid(%d): %d\n", ourConf->globals.gidDropPriv, res);
+	DBGPRINTF("setgid(%d): %d\n", cnf->globals.gidDropPriv, res);
 	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's groupid changed to %d",
-		 ourConf->globals.gidDropPriv);
+		 cnf->globals.gidDropPriv);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
 finalize_it:
 	RETiRet;
@@ -583,7 +586,7 @@ finalize_it:
  * Note that such an abort can cause damage to on-disk structures, so we should
  * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
  */
-static void doDropPrivUid(const int iUid)
+static void doDropPrivUid(rsconf_t *cnf)
 {
 	int res;
 	uchar szBuf[1024];
@@ -593,23 +596,24 @@ static void doDropPrivUid(const int iUid)
 	/* Try to set appropriate supplementary groups for this user.
 	 * Failure is not fatal.
 	 */
-	pw = getpwuid(iUid);
+	pw = getpwuid(cnf->globals.uidDropPriv);
 	if (pw) {
 		gid = getgid();
 		res = initgroups(pw->pw_name, gid);
 		DBGPRINTF("initgroups(%s, %ld): %d\n", pw->pw_name, (long) gid, res);
 	} else {
-		LogError(errno, NO_ERRCODE, "could not get username for userid '%d'", iUid);
+		LogError(errno, NO_ERRCODE, "could not get username for userid '%d'",
+			cnf->globals.uidDropPriv);
 	}
 
-	res = setuid(iUid);
+	res = setuid(cnf->globals.uidDropPriv);
 	if(res) {
 		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
 		perror("could not set requested userid");
 		exit(1);
 	}
-	DBGPRINTF("setuid(%d): %d\n", iUid, res);
-	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's userid changed to %d", iUid);
+	DBGPRINTF("setuid(%d): %d\n", cnf->globals.uidDropPriv, res);
+	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's userid changed to %d", cnf->globals.uidDropPriv);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
 }
 
@@ -625,15 +629,15 @@ dropPrivileges(rsconf_t *cnf)
 	DEFiRet;
 
 	if(cnf->globals.gidDropPriv != 0) {
-		CHKiRet(doDropPrivGid());
+		CHKiRet(doDropPrivGid(cnf));
 		DBGPRINTF("group privileges have been dropped to gid %u\n", (unsigned)
-			  ourConf->globals.gidDropPriv);
+			  cnf->globals.gidDropPriv);
 	}
 
 	if(cnf->globals.uidDropPriv != 0) {
-		doDropPrivUid(ourConf->globals.uidDropPriv);
+		doDropPrivUid(cnf);
 		DBGPRINTF("user privileges have been dropped to uid %u\n", (unsigned)
-			  ourConf->globals.uidDropPriv);
+			  cnf->globals.uidDropPriv);
 	}
 
 finalize_it:
@@ -647,7 +651,7 @@ finalize_it:
 static inline rsRetVal
 tellCoreConfigLoadDone(void)
 {
-	DBGPRINTF("telling rsyslog core that config load for %p is done\n", loadConf);
+	DBGPRINTF("telling rsyslog core that config load for %p is done\n", loadConf); // OK
 	return glblDoneLoadCnf();
 }
 
@@ -658,15 +662,15 @@ tellModulesConfigLoadDone(void)
 {
 	cfgmodules_etry_t *node;
 
-	DBGPRINTF("telling modules that config load for %p is done\n", loadConf);
-	node = module.GetNxtCnfType(loadConf, NULL, eMOD_ANY);
+	DBGPRINTF("telling modules that config load for %p is done\n", loadConf); // OK
+	node = module.GetNxtCnfType(loadConf, NULL, eMOD_ANY); // OK
 	while(node != NULL) {
 		DBGPRINTF("beginCnfLoad(%p) for module '%s'\n", node->pMod->beginCnfLoad, node->pMod->pszName);
 		if(node->pMod->beginCnfLoad != NULL) {
 			DBGPRINTF("calling endCnfLoad() for module '%s'\n", node->pMod->pszName);
 			node->pMod->endCnfLoad(node->modCnf);
 		}
-		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
+		node = module.GetNxtCnfType(loadConf, node, eMOD_ANY); // loadConf -> runConf
 	}
 
 	return RS_RET_OK; /* intentional: we do not care about module errors */
@@ -680,8 +684,8 @@ tellModulesCheckConfig(void)
 	cfgmodules_etry_t *node;
 	rsRetVal localRet;
 
-	DBGPRINTF("telling modules to check config %p\n", loadConf);
-	node = module.GetNxtCnfType(loadConf, NULL, eMOD_ANY);
+	DBGPRINTF("telling modules to check config %p\n", loadConf); // OK
+	node = module.GetNxtCnfType(loadConf, NULL, eMOD_ANY); // OK
 	while(node != NULL) {
 		if(node->pMod->beginCnfLoad != NULL) {
 			localRet = node->pMod->checkCnf(node->modCnf);
@@ -693,7 +697,7 @@ tellModulesCheckConfig(void)
 				node->canActivate = 0;
 			}
 		}
-		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
+		node = module.GetNxtCnfType(loadConf, node, eMOD_ANY); // runConf -> loadConf
 	}
 
 	return RS_RET_OK; /* intentional: we do not care about module errors */
@@ -707,7 +711,7 @@ tellModulesActivateConfigPrePrivDrop(void)
 	cfgmodules_etry_t *node;
 	rsRetVal localRet;
 
-	DBGPRINTF("telling modules to activate config (before dropping privs) %p\n", runConf);
+	DBGPRINTF("telling modules to activate config (before dropping privs) %p\n", runConf); // OK ALL
 	node = module.GetNxtCnfType(runConf, NULL, eMOD_ANY);
 	while(node != NULL) {
 		if(   node->pMod->beginCnfLoad != NULL
@@ -829,7 +833,7 @@ activateMainQueue(void)
 		FINALIZE;
 	}
 
-	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) {
+	if(runConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) { // ourConf -> runConf
 		PREFER_STORE_0_TO_INT(&bHaveMainQueue);
 	} else {
 		PREFER_STORE_1_TO_INT(&bHaveMainQueue);
@@ -867,6 +871,7 @@ activate(rsconf_t *cnf)
 
 	/* at this point, we "switch" over to the running conf */
 	runConf = cnf;
+	loadConf = NULL;
 #	if	0 /* currently the DAG is not supported -- code missing! */
 	/* TODO: re-enable this functionality some time later! */
 	/* check if we need to generate a config DAG and, if so, do that */
@@ -969,7 +974,7 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 	DEFiRet;
 
 	if (!strcasecmp((char *) pszType, "fixedarray")) {
-		loadConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+		loadConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY; // OK
 		DBGPRINTF("main message queue type set to FIXED_ARRAY\n");
 	} else if (!strcasecmp((char *) pszType, "linkedlist")) {
 		loadConf->globals.mainQ.MainMsgQueType = QUEUETYPE_LINKEDLIST;
@@ -1027,9 +1032,9 @@ finalize_it:
 /* legacy config system: reset config variables to default values.  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	free(loadConf->globals.mainQ.pszMainMsgQFName);
+	free(loadConf->globals.mainQ.pszMainMsgQFName); //OK
 
-	cnfSetDefaults(loadConf);
+	cnfSetDefaults(loadConf); // OK
 
 	return RS_RET_OK;
 }
@@ -1126,9 +1131,8 @@ initLegacyConf(void)
 
 	DBGPRINTF("doing legacy config system init\n");
 	/* construct the default ruleset */
-	ruleset.Construct(&pRuleset);
-	ruleset.SetName(pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
-	ruleset.ConstructFinalize(loadConf, pRuleset);
+	ruleset.Construct(&pRuleset);ruleset.SetName(pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
+	ruleset.ConstructFinalize(loadConf, pRuleset); // OK
 	rulesetSetCurrRulesetPtr(pRuleset);
 
 	/* now register config handlers */
@@ -1280,31 +1284,31 @@ finalize_it:
 }
 
 
-/* validate the current configuration, generate error messages, do
+/* validate the configuration pointed by conf, generate error messages, do
  * optimizations, etc, etc,...
  */
 static rsRetVal
-validateConf(void)
+validateConf(rsconf_t *cnf)
 {
 	DEFiRet;
 
 	/* some checks */
-	if(ourConf->globals.mainQ.iMainMsgQueueNumWorkers < 1) {
+	if(cnf->globals.mainQ.iMainMsgQueueNumWorkers < 1) {
 		LogError(0, NO_ERRCODE, "$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
-		ourConf->globals.mainQ.iMainMsgQueueNumWorkers = 1;
+		cnf->globals.mainQ.iMainMsgQueueNumWorkers = 1;
 	}
 
-	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
+	if(cnf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
 		errno = 0;	/* for logerror! */
-		if(glbl.GetWorkDir() == NULL) {
+		if(glbl.GetWorkDir(cnf) == NULL) {
 			LogError(0, NO_ERRCODE, "No $WorkDirectory specified - can not run main "
 					"message queue in 'disk' mode. Using 'FixedArray' instead.\n");
-			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+			cnf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
-		if(ourConf->globals.mainQ.pszMainMsgQFName == NULL) {
+		if(cnf->globals.mainQ.pszMainMsgQFName == NULL) {
 			LogError(0, NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main "
 				"message queue in 'disk' mode. Using 'FixedArray' instead.\n");
-			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+			cnf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 	}
 	RETiRet;
@@ -1327,7 +1331,7 @@ load(rsconf_t **cnf, uchar *confFile)
 	DEFiRet;
 
 	CHKiRet(rsconfConstruct(&loadConf));
-ourConf = loadConf; // TODO: remove, once ourConf is gone!
+	ourConf = loadConf; // TODO: remove, once ourConf is gone!
 
 	CHKiRet(loadBuildInModules());
 	CHKiRet(initLegacyConf());
@@ -1336,13 +1340,13 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	r = cnfSetLexFile((char*)confFile);
 	if(r == 0) {
 		r = yyparse();
-		conf.GetNbrActActions(loadConf, &iNbrActions);
+		conf.GetNbrActActions(loadConf, &iNbrActions); // OK
 	}
 
 	/* we run the optimizer even if we have an error, as it may spit out
 	 * additional error messages and we want to see these even if we abort.
 	 */
-	rulesetOptimizeAll(loadConf);
+	rulesetOptimizeAll(loadConf); // OK
 
 	if(r == 1) {
 		LogError(0, RS_RET_CONF_PARSE_ERROR, "could not interpret master "
@@ -1366,7 +1370,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	tellModulesConfigLoadDone();
 
 	tellModulesCheckConfig();
-	CHKiRet(validateConf());
+	CHKiRet(validateConf(loadConf)); // OK
 
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25
@@ -1380,7 +1384,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 
 	/* all OK, pass loaded conf to caller */
 	*cnf = loadConf;
-// TODO: enable this once all config code is moved to here!	loadConf = NULL;
+	// TODO: enable this once all config code is moved to here!	loadConf = NULL;
 
 	dbgprintf("rsyslog finished loading master config %p\n", loadConf);
 	rsconfDebugPrint(loadConf);

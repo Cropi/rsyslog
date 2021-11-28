@@ -1979,7 +1979,7 @@ rsRetVal
 activateActions(void)
 {
 	DEFiRet;
-	iRet = ruleset.IterateAllActions(ourConf, doActivateActions, NULL);
+	iRet = ruleset.IterateAllActions(runConf, doActivateActions, NULL); // our -> run
 	RETiRet;
 }
 
@@ -2149,7 +2149,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		 */
 		if(!(iTplOpts & OMSR_TPL_AS_MSG)) {
 		   	if((pAction->ppTpl[i] =
-				tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
+				tplFind(loadConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) { // our -> load
 				snprintf(errMsg, sizeof(errMsg),
 					 " Could not find template %d '%s' - action disabled",
 					 i, pTplName);
@@ -2258,7 +2258,7 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 	dbgprintf("action param blk after actionNewInst:\n");
 	cnfparamsPrint(&pblk, paramvals);
 	cnfModName = (uchar*)es_str2cstr(paramvals[cnfparamGetIdx(&pblk, ("type"))].val.d.estr, NULL);
-	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_OUT)) == NULL) {
+	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_OUT)) == NULL) { // OK
 		LogError(0, RS_RET_MOD_UNKNOWN, "module name '%s' is unknown", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
 	}
@@ -2267,7 +2267,7 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, lst)) == RS_RET_OK) {
 		/* check if the module is compatible with select features
 		 * (currently no such features exist) */
-		loadConf->actions.nbrActions++;	/* one more active action! */
+		loadConf->actions.nbrActions++;	/* one more active action! */ // OK
 		*ppAction = pAction;
 	} else {
 		// TODO: cleanup

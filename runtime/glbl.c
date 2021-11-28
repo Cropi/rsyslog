@@ -91,7 +91,6 @@ int bProcessInternalMessages = 0;	/* Should rsyslog itself process internal mess
 					 * 1 - yes
 					 * 0 - send them to libstdlog (e.g. to push to journal) or syslog()
 					 */
-static uchar *pszWorkDir = NULL;
 #ifdef ENABLE_LIBLOGGING_STDLOG
 static uchar *stdlog_chanspec = NULL;
 #endif
@@ -438,8 +437,8 @@ static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
 	}
 
-	free(pszWorkDir);
-	pszWorkDir = pNewVal;
+	free(loadConf->globals.pszWorkDir);
+	loadConf->globals.pszWorkDir = pNewVal;
 
 finalize_it:
 	RETiRet;
@@ -816,18 +815,18 @@ GetLocalFQDNName(void)
 
 /* return the current working directory */
 static uchar*
-GetWorkDir(void)
+GetWorkDir(rsconf_t *cnf)
 {
-	return(pszWorkDir == NULL ? (uchar*) "" : pszWorkDir);
+	return(cnf->globals.pszWorkDir == NULL ? (uchar*) "" : cnf->globals.pszWorkDir);
 }
 
 /* return the "raw" working directory, which means
  * NULL if unset.
  */
 const uchar *
-glblGetWorkDirRaw(void)
+glblGetWorkDirRaw(rsconf_t *cnf)
 {
-	return pszWorkDir;
+	return cnf->globals.pszWorkDir;
 }
 
 /* return the current default netstream driver */
@@ -958,8 +957,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	oversizeMsgErrorFile = NULL;
 	oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
 	reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
-	free(pszWorkDir);
-	pszWorkDir = NULL;
+	free(loadConf->globals.pszWorkDir);
+	loadConf->globals.pszWorkDir = NULL;
 	free((void*)operatingStateFile);
 	operatingStateFile = NULL;
 	bDropMalPTRMsgs = 0;
@@ -1195,7 +1194,7 @@ glblProcessCnf(struct cnfobj *o)
 				osf_open();
 			}
 		} else if(!strcmp(paramblk.descr[i].name, "security.abortonidresolutionfail")) {
-			loadConf->globals.abortOnIDResolutionFail = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.abortOnIDResolutionFail = (int) cnfparamvals[i].val.d.n; // OK
 			cnfparamvals[i].bUsed = TRUE;
 		}
 	}
@@ -1453,7 +1452,7 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "inputs.timeout.shutdown")) {
 			glblInputTimeoutShutdown = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.keepsupplemental")) {
-			loadConf->globals.gidDropPrivKeepSupplemental = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.gidDropPrivKeepSupplemental = (int) cnfparamvals[i].val.d.n; // OK ALL
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.id")) {
 			loadConf->globals.gidDropPriv = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.name")) {
@@ -1603,7 +1602,6 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	free(pszDfltNetstrmDrvrCAF);
 	free(pszDfltNetstrmDrvrKeyFile);
 	free(pszDfltNetstrmDrvrCertFile);
-	free(pszWorkDir);
 	free(LocalDomain);
 	free(LocalHostName);
 	free(LocalHostNameOverride);

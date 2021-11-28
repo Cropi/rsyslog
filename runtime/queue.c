@@ -62,6 +62,7 @@
 #include "unicode-helper.h"
 #include "statsobj.h"
 #include "parserif.h"
+#include "rsconf.h"
 
 #ifdef OS_SOLARIS
 #	include <sched.h>
@@ -1482,7 +1483,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 {
 	DEFiRet;
 	qqueue_t *pThis;
-	const uchar *const workDir = glblGetWorkDirRaw();
+	const uchar *const workDir = glblGetWorkDirRaw(ourConf);
 
 	assert(ppThis != NULL);
 	assert(pConsumer != NULL);
@@ -2351,7 +2352,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 		/* note: we need to pick the path so late as we do not have
 		 *       the workdir during early config load
 		 */
-		if((pThis->pszSpoolDir = (uchar*) strdup((char*)glbl.GetWorkDir())) == NULL)
+		if((pThis->pszSpoolDir = (uchar*) strdup((char*)glbl.GetWorkDir(runConf))) == NULL)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		pThis->lenSpoolDir = ustrlen(pThis->pszSpoolDir);
 	}

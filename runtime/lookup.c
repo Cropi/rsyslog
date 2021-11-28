@@ -103,7 +103,7 @@ lookupNew(lookup_ref_t **ppThis)
 	initialized++; /*5*/
 
 	pThis->next = NULL;
-	if(loadConf->lu_tabs.root == NULL) {
+	if(loadConf->lu_tabs.root == NULL) { // OK all
 		loadConf->lu_tabs.root = pThis;
 	} else {
 		loadConf->lu_tabs.last->next = pThis;
@@ -229,7 +229,7 @@ void
 lookupDestroyCnf(void)
 {
 	lookup_ref_t *luref, *luref_next;
-	for(luref = loadConf->lu_tabs.root ; luref != NULL ; ) {
+	for(luref = runConf->lu_tabs.root ; luref != NULL ; ) { // loadConf -> runConf
 		luref_next = luref->next;
 		lookupRefDestruct(luref);
 		luref = luref_next;
@@ -700,7 +700,7 @@ lookupFindTable(uchar *name)
 {
 	lookup_ref_t *curr;
 
-	for(curr = loadConf->lu_tabs.root ; curr != NULL ; curr = curr->next) {
+	for(curr = loadConf->lu_tabs.root ; curr != NULL ; curr = curr->next) { // OK
 		if(!ustrcmp(curr->name, name))
 			break;
 	}
@@ -861,7 +861,7 @@ void
 lookupDoHUP(void)
 {
 	lookup_ref_t *luref;
-	for(luref = loadConf->lu_tabs.root ; luref != NULL ; luref = luref->next) {
+	for(luref = runConf->lu_tabs.root ; luref != NULL ; luref = luref->next) { // loadConf -> runConf
 		if (luref->reload_on_hup) {
 			lookupReload(luref, NULL);
 		}
@@ -873,7 +873,7 @@ lookupPendingReloadCount(void)
 {
 	uint pending_reload_count = 0;
 	lookup_ref_t *luref;
-	for(luref = loadConf->lu_tabs.root ; luref != NULL ; luref = luref->next) {
+	for(luref = runConf->lu_tabs.root ; luref != NULL ; luref = luref->next) { // loadConf->runConf
 		if (lookupIsReloadPending(luref)) {
 			pending_reload_count++;
 		}

@@ -363,12 +363,12 @@ readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **
 	DEFiRet;
 	assert(pThis != NULL);
 
-	if(loadConf == NULL) {
+	if(loadConf == NULL) { // OK
 		FINALIZE; /* we are in an early init state */
 	}
 
 	/* check for duplicates and, as a side-activity, identify last node */
-	pLast = loadConf->modules.root;
+	pLast = loadConf->modules.root; // OK
 	if(pLast != NULL) {
 		while(1) { /* loop broken inside */
 			if(pLast->pMod == pThis) {
@@ -397,7 +397,7 @@ readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **
 	pNew->pMod = pThis;
 
 	if(pThis->beginCnfLoad != NULL) {
-		CHKiRet(pThis->beginCnfLoad(&pNew->modCnf, loadConf));
+		CHKiRet(pThis->beginCnfLoad(&pNew->modCnf, loadConf)); // OK
 	}
 
 	*ppLast = pLast;
@@ -435,13 +435,13 @@ addModToCnfList(cfgmodules_etry_t **const pNew, cfgmodules_etry_t *const pLast)
 	DEFiRet;
 	assert(*pNew != NULL);
 
-	if(loadConf == NULL) {
+	if(loadConf == NULL) { // OK
 		abortCnfUse(pNew);
 		FINALIZE; /* we are in an early init state */
 	}
 
 	if(pLast == NULL) {
-		loadConf->modules.root = *pNew;
+		loadConf->modules.root = *pNew; // OK
 	} else {
 		/* there already exist entries */
 		pLast->next = *pNew;

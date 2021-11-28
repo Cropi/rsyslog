@@ -716,7 +716,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 	DEFiRet;
 
 	/* create message queue */
-	CHKiRet_Hdlr(qqueueConstruct(ppQueue, ourConf->globals.mainQ.MainMsgQueType,
+	CHKiRet_Hdlr(qqueueConstruct(ppQueue, ourConf->globals.mainQ.MainMsgQueType, // OK FOR NOW
 	ourConf->globals.mainQ.iMainMsgQueueNumWorkers, ourConf->globals.mainQ.iMainMsgQueueSize, msgConsumer)) {
 		/* no queue is fatal, we need to give up in that case... */
 		LogError(0, iRet, "could not create (ruleset) main message queue"); \
@@ -737,7 +737,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 			"running with default setting", iRet); \
 		}
 
-		if(ourConf->globals.mainQ.pszMainMsgQFName != NULL) {
+		if(ourConf->globals.mainQ.pszMainMsgQFName != NULL) { // OK for now
 			/* check if the queue file name is unique, else emit an error */
 			for(qfn = queuefilenames ; qfn != NULL ; qfn = qfn->next) {
 				dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name,
@@ -958,7 +958,7 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	int emit_to_stderr = (ourConf == NULL) ? 1 : ourConf->globals.bErrMsgToStderr;
+	int emit_to_stderr = (ourConf == NULL) ? 1 : ourConf->globals.bErrMsgToStderr; // OK for now
 	int emit_supress_msg = 0;
 	if(Debug == DEBUG_FULL || !doFork) {
 		emit_to_stderr = 1;
@@ -1577,7 +1577,7 @@ initAll(int argc, char **argv)
 	glbl.GenerateLocalHostNameProperty();
 
 	if(hadErrMsgs()) {
-		if(loadConf->globals.bAbortOnUncleanConfig) {
+		if(loadConf->globals.bAbortOnUncleanConfig) { // OK
 			fprintf(stderr, "rsyslogd: global(AbortOnUncleanConfig=\"on\") is set, and "
 				"config is not clean.\n"
 				"Check error log for details, fix errors and restart. As a last\n"
@@ -1626,14 +1626,14 @@ initAll(int argc, char **argv)
 	hdlr_enable(SIGCHLD, hdlr_sigchld);
 	hdlr_enable(SIGHUP, hdlr_sighup);
 
-	if(rsconfNeedDropPriv(ourConf)) {
+	if(rsconfNeedDropPriv(loadConf)) { // our -> load
 		/* need to write pid file early as we may loose permissions */
 		CHKiRet(writePidFile());
 	}
 
-	CHKiRet(rsconf.Activate(ourConf));
+	CHKiRet(rsconf.Activate(ourConf)); // OK for now
 
-	if(ourConf->globals.bLogStatusMsgs) {
+	if(runConf->globals.bLogStatusMsgs) { // our -> run
 		char bufStartUpMsg[512];
 		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg),
 			 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
@@ -1642,7 +1642,7 @@ initAll(int argc, char **argv)
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 	}
 
-	if(!rsconfNeedDropPriv(ourConf)) {
+	if(!rsconfNeedDropPriv(runConf)) { // our -> run
 		CHKiRet(writePidFile());
 	}
 
@@ -1654,7 +1654,8 @@ initAll(int argc, char **argv)
 		stddbg = -1; /* turn off writing to fd 1 */
 		close(1);
 		close(2);
-		ourConf->globals.bErrMsgToStderr = 0;
+		//ourConf->globals.bErrMsgToStderr = 0;
+		runConf->globals.bErrMsgToStderr = 0;
 	}
 
 finalize_it:
@@ -1990,7 +1991,7 @@ mainloop(void)
 static void
 rsyslogd_destructAllActions(void)
 {
-	ruleset.DestructAllActions(runConf);
+	ruleset.DestructAllActions(runConf); // OK
 	PREFER_STORE_0_TO_INT(&bHaveMainQueue); /* flag that internal messages need to be temporarily stored */
 }
 
@@ -2022,7 +2023,7 @@ deinitAll(void)
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
-	if(bFinished && runConf->globals.bLogStatusMsgs) {
+	if(bFinished && runConf->globals.bLogStatusMsgs) { // OK
 		(void) snprintf(buf, sizeof(buf),
 		 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"]" " exiting on signal %d.",
@@ -2051,7 +2052,7 @@ deinitAll(void)
 	DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
 
 	DBGPRINTF("destructing current config...\n");
-	rsconf.Destruct(&runConf);
+	rsconf.Destruct(&runConf); // OK
 
 	modExitIminternal();
 
