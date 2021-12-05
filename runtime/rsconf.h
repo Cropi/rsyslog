@@ -78,6 +78,7 @@ struct globals_s {
 	int umask;		/* umask to use */
 	uchar *pszConfDAGFile;	/* name of config DAG file, non-NULL means generate one */
 	uchar *pszWorkDir;
+	uchar *operatingStateFile;
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

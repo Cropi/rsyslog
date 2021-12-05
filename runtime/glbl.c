@@ -145,7 +145,6 @@ int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
 int glblInputTimeoutShutdown = 1000; /* input shutdown timeout in ms */
 int glblShutdownQueueDoubleSize = 0;
-static const uchar * operatingStateFile = NULL;
 
 uint64_t glblDevOptions = 0; /* to be used by developers only */
 
@@ -650,9 +649,9 @@ glblGetOversizeMsgErrorFile(void)
 }
 
 const uchar*
-glblGetOperatingStateFile(void)
+glblGetOperatingStateFile(rsconf_t *cnf)
 {
-	return operatingStateFile;
+	return cnf->globals.operatingStateFile;
 }
 
 /* return the mode with which oversize messages will be put forward
@@ -959,8 +958,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 	free(loadConf->globals.pszWorkDir);
 	loadConf->globals.pszWorkDir = NULL;
-	free((void*)operatingStateFile);
-	operatingStateFile = NULL;
+	free((void*)loadConf->globals.operatingStateFile);
+	loadConf->globals.operatingStateFile = NULL;
 	bDropMalPTRMsgs = 0;
 	bPreserveFQDN = 0;
 	iMaxLine = 8192;
@@ -1185,12 +1184,12 @@ glblProcessCnf(struct cnfobj *o)
 			cnfparamvals[i].bUsed = TRUE;
 #endif
 		} else if(!strcmp(paramblk.descr[i].name, "operatingstatefile")) {
-			if(operatingStateFile != NULL) {
+			if(loadConf->globals.operatingStateFile != NULL) {
 				LogError(errno, RS_RET_PARAM_ERROR,
 					"error: operatingStateFile already set to '%s' - "
-					"new value ignored", operatingStateFile);
+					"new value ignored", loadConf->globals.operatingStateFile);
 			} else {
-				operatingStateFile = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+				loadConf->globals.operatingStateFile = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 				osf_open();
 			}
 		} else if(!strcmp(paramblk.descr[i].name, "security.abortonidresolutionfail")) {

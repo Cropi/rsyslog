@@ -164,6 +164,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->templates.lastStatic = NULL;
 	pThis->actions.nbrActions = 0;
 	pThis->globals.pszWorkDir = NULL;
+	pThis->globals.operatingStateFile = NULL;
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
