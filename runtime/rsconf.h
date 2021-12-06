@@ -85,6 +85,7 @@ struct globals_s {
 	uchar *pszDfltNetstrmDrvrCAF; /* default CA file for the netstrm driver */
 	uchar *pszDfltNetstrmDrvrCertFile; /* default cert file for the netstrm driver (server) */
 	uchar *pszDfltNetstrmDrvrKeyFile; /* default key file for the netstrm driver (server) */
+	uchar *pszDfltNetstrmDrvr; /* module name of default netstream driver */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

@@ -115,7 +115,6 @@ static char **StripDomains = NULL;
 /* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
 static char **LocalHosts = NULL;
 /* these hosts are logged with their hostname  - read-only after startup, never touched by init */
-static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream driver */
 int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
 static uchar cCCEscapeChar = '#'; /* character to be used to start an escape sequence for control chars */
 static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
@@ -295,6 +294,10 @@ static rsRetVal Set##nameFunc(dataType newVal) \
 #define SIMP_PROP_GET2(nameFunc, nameVar, dataType) \
 static dataType Get##nameFunc(rsconf_t *cnf) \
 { \
+	assert(cnf != NULL); \
+	if (cnf == NULL) \
+		LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED, \
+			"[%s]%d - %s: KIBASZOTT\n", __FILE__, __LINE__,  __func__); \
 	return(cnf->globals.nameVar); \
 }
 
@@ -319,7 +322,6 @@ SIMP_PROP(ParserEscapeControlCharactersCStyle, bParserEscapeCCCStyle, int)
 SIMP_PROP(FdSetSize, iFdSetSize, int)
 #endif
 
-SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) /* TODO: use custom function which frees existing value */
 
 #undef SIMP_PROP
 #undef SIMP_PROP_SET
@@ -507,6 +509,14 @@ setDfltNetstrmDrvrKeyFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 		loadConf->globals.pszDfltNetstrmDrvrKeyFile = pNewVal;
 	}
 
+	RETiRet;
+}
+
+static rsRetVal
+setDfltNetstrmDrvr(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	free(loadConf->globals.pszDfltNetstrmDrvr);
+	loadConf->globals.pszDfltNetstrmDrvr = pNewVal;
 	RETiRet;
 }
 
@@ -896,9 +906,9 @@ glblGetWorkDirRaw(rsconf_t *cnf)
 
 /* return the current default netstream driver */
 static uchar*
-GetDfltNetstrmDrvr(void)
+GetDfltNetstrmDrvr(rsconf_t *cnf)
 {
-	return(pszDfltNetstrmDrvr == NULL ? DFLT_NETSTRM_DRVR : pszDfltNetstrmDrvr);
+	return(cnf->globals.pszDfltNetstrmDrvr == NULL ? DFLT_NETSTRM_DRVR : cnf->globals.pszDfltNetstrmDrvr);
 }
 
 
@@ -977,6 +987,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetDfltNetstrmDrvrCAF = GetDfltNetstrmDrvrCAF;
 	pIf->GetDfltNetstrmDrvrCertFile = GetDfltNetstrmDrvrCertFile;
 	pIf->GetDfltNetstrmDrvrKeyFile = GetDfltNetstrmDrvrKeyFile;
+	pIf->GetDfltNetstrmDrvr = GetDfltNetstrmDrvr;
 #define SIMP_PROP2(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
@@ -999,7 +1010,6 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(ParserEscape8BitCharactersOnReceive)
 	SIMP_PROP(ParserEscapeControlCharacterTab)
 	SIMP_PROP(ParserEscapeControlCharactersCStyle)
-	SIMP_PROP(DfltNetstrmDrvr)
 #ifdef USE_UNLIMITED_SELECT
 	SIMP_PROP(FdSetSize)
 #endif
@@ -1013,8 +1023,8 @@ ENDobjQueryInterface(glbl)
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	free(pszDfltNetstrmDrvr);
-	pszDfltNetstrmDrvr = NULL;
+	free(loadConf->globals.pszDfltNetstrmDrvr);
+	loadConf->globals.pszDfltNetstrmDrvr = NULL;
 	free(loadConf->globals.pszDfltNetstrmDrvrCAF);
 	loadConf->globals.pszDfltNetstrmDrvrCAF = NULL;
 	free(loadConf->globals.pszDfltNetstrmDrvrKeyFile);
@@ -1400,9 +1410,8 @@ glblDoneLoadCnf(void)
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setDfltNetstrmDrvrCAF(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
-			free(pszDfltNetstrmDrvr);
-			pszDfltNetstrmDrvr = (uchar*)
-				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setDfltNetstrmDrvr(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "preservefqdn")) {
 			bPreserveFQDN = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name,
@@ -1602,8 +1611,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setDebugLevel, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, SetDropMalPTRMsgs, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr,
-	NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, setDfltNetstrmDrvr, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, setDfltNetstrmDrvrCAF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, setDfltNetstrmDrvrKeyFile,
 	NULL, NULL));
@@ -1637,7 +1645,7 @@ ENDObjClassInit(glbl)
  * rgerhards, 2008-04-17
  */
 BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
-	free(pszDfltNetstrmDrvr);
+	// free(pszDfltNetstrmDrvr);
 	// free(pszDfltNetstrmDrvrCAF);
 	// free(pszDfltNetstrmDrvrKeyFile);
 	// free(pszDfltNetstrmDrvrCertFile);
