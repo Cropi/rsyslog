@@ -157,7 +157,7 @@ void glblDestructMainqCnfObj(void);
 rsRetVal glblDoneLoadCnf(void);
 const uchar * glblGetWorkDirRaw(rsconf_t *cnf);
 tzinfo_t* glblFindTimezoneInfo(char *id);
-int GetGnuTLSLoglevel(void);
+int GetGnuTLSLoglevel(rsconf_t *cnf);
 int glblGetMaxLine(void);
 int bs_arrcmp_glblDbgFiles(const void *s1, const void *s2);
 uchar* glblGetOversizeMsgErrorFile(void);

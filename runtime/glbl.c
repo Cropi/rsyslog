@@ -100,7 +100,6 @@ static uchar * oversizeMsgErrorFile = NULL;		/* File where oversize messages are
 static int oversizeMsgInputMode = 0;	/* Mode which oversize messages will be forwarded */
 static int reportOversizeMsg = 1;	/* shall error messages be generated for oversize messages? */
 static int reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
-static int iGnuTLSLoglevel = 0;		/* Sets GNUTLS Debug Level */
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
@@ -263,9 +262,9 @@ glblGetMaxLine(void)
 
 
 int
-GetGnuTLSLoglevel(void)
+GetGnuTLSLoglevel(rsconf_t *cnf)
 {
-	return(iGnuTLSLoglevel);
+	return(cnf->globals.iGnuTLSLoglevel);
 }
 
 /* define a macro for the simple properties' set and get functions
@@ -1408,7 +1407,7 @@ glblDoneLoadCnf(void)
 			loadConf->globals.glblDebugOnShutdown = (int) cnfparamvals[i].val.d.n;
 			LogError(0, RS_RET_OK, "debug: onShutdown set to %d", loadConf->globals.glblDebugOnShutdown);
 		} else if(!strcmp(paramblk.descr[i].name, "debug.gnutls")) {
-			iGnuTLSLoglevel = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.iGnuTLSLoglevel = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.unloadmodules")) {
 			glblUnloadModules = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.controlcharacterescapeprefix")) {

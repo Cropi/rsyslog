@@ -53,6 +53,7 @@
 #include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
 #include "unicode-helper.h"
+#include "rsconf.h"
 
 /* things to move to some better place/functionality - TODO */
 #define CRLFILE "crl.pem"
@@ -739,9 +740,9 @@ gtlsGlblInit(void)
 	#endif
 	CHKgnutls(gnutls_global_init());
 
-	if(GetGnuTLSLoglevel() > 0){
+	if(GetGnuTLSLoglevel(runConf) > 0){
 		gnutls_global_set_log_function(logFunction);
-		gnutls_global_set_log_level(GetGnuTLSLoglevel());
+		gnutls_global_set_log_level(GetGnuTLSLoglevel(runConf));
 		/* 0 (no) to 9 (most), 10 everything */
 	}
 
