@@ -116,7 +116,6 @@ static char **StripDomains = NULL;
 static char **LocalHosts = NULL;
 /* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream driver */
-static uchar *pszDfltNetstrmDrvrCAF = NULL; /* default CA file for the netstrm driver */
 static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
 static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
 int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
@@ -286,22 +285,26 @@ static dataType Get##nameFunc(void) \
 	return(nameVar); \
 }
 
-#define SIMP_PROP_CNF(nameFunc, nameVar, dataType) \
-	SIMP_PROP_GET_CNF(nameFunc, nameVar, dataType) \
-	SIMP_PROP_SET_CNF(nameFunc, nameVar, dataType)
-#define SIMP_PROP_SET_CNF(nameFunc, nameVar, dataType) \
-static rsRetVal Set##nameFunc(rsconf_t *cnf, dataType newVal) \
+#define SIMP_PROP2(nameFunc, nameVar, dataType) \
+	SIMP_PROP_GET2(nameFunc, nameVar, dataType) \
+	SIMP_PROP_SET2(nameFunc, nameVar, dataType)
+#define SIMP_PROP_SET2(nameFunc, nameVar, dataType) \
+static rsRetVal Set##nameFunc(dataType newVal) \
 { \
-	cnf->globals.nameVar = newVal; \
+	loadConf->globals.nameVar = newVal; \
 	return RS_RET_OK; \
 }
-#define SIMP_PROP_GET_CNF(nameFunc, nameVar, dataType) \
+#define SIMP_PROP_GET2(nameFunc, nameVar, dataType) \
 static dataType Get##nameFunc(rsconf_t *cnf) \
 { \
 	return(cnf->globals.nameVar); \
 }
 
-SIMP_PROP_CNF(DropMalPTRMsgs, bDropMalPTRMsgs, int)
+SIMP_PROP2(DropMalPTRMsgs, bDropMalPTRMsgs, int)
+/* We omit the setter on purpose as we want to customize it */
+SIMP_PROP_GET2(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
+/* TODO: use custom function which frees existing value */
+
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
 SIMP_PROP(StripDomains, StripDomains, char**)
@@ -318,8 +321,6 @@ SIMP_PROP(FdSetSize, iFdSetSize, int)
 #endif
 
 SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) /* TODO: use custom function which frees existing value */
-SIMP_PROP_SET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
-/* TODO: use custom function which frees existing value */
 SIMP_PROP_SET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*)
 /* TODO: use custom function which frees existing value */
 SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
@@ -329,9 +330,9 @@ SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
 #undef SIMP_PROP_SET
 #undef SIMP_PROP_GET
 
-#undef SIMP_PROP_CNF
-#undef SIMP_PROP_SET_CNF
-#undef SIMP_PROP_GET_CNF
+#undef SIMP_PROP2
+#undef SIMP_PROP_SET2
+#undef SIMP_PROP_GET2
 
 /* return global input termination status
  * rgerhards, 2009-07-20
@@ -458,6 +459,23 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+setDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	FILE *fp;
+	free(loadConf->globals.pszDfltNetstrmDrvrCAF);
+	fp = fopen((const char*)pNewVal, "r");
+	if(fp == NULL) {
+		LogError(errno, RS_RET_NO_FILE_ACCESS,
+			"error: defaultnetstreamdrivercafile file '%s' "
+			"could not be accessed", pNewVal);
+	} else {
+		fclose(fp);
+		loadConf->globals.pszDfltNetstrmDrvrCAF = pNewVal;
+	}
+
+	RETiRet;
+}
 
 /* This function is used both by legacy and RainerScript conf. It is a real setter. */
 static void
@@ -852,11 +870,11 @@ GetDfltNetstrmDrvr(void)
 
 
 /* return the current default netstream driver CA File */
-static uchar*
-GetDfltNetstrmDrvrCAF(void)
-{
-	return(pszDfltNetstrmDrvrCAF);
-}
+// static uchar*
+// GetDfltNetstrmDrvrCAF(void)
+// {
+// 	return(pszDfltNetstrmDrvrCAF);
+// }
 
 
 /* return the current default netstream driver key File */
@@ -923,10 +941,12 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
 	pIf->SetParseHOSTNAMEandTAG = setParseHOSTNAMEandTAG;
 	pIf->GetParseHOSTNAMEandTAG = getParseHOSTNAMEandTAG;
-#define SIMP_PROP_CNF(name) \
+	pIf->GetDfltNetstrmDrvrCAF = GetDfltNetstrmDrvrCAF;
+#define SIMP_PROP2(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
-	SIMP_PROP_CNF(DropMalPTRMsgs);
+	SIMP_PROP2(DropMalPTRMsgs)
+
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
@@ -945,14 +965,13 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(ParserEscapeControlCharacterTab)
 	SIMP_PROP(ParserEscapeControlCharactersCStyle)
 	SIMP_PROP(DfltNetstrmDrvr)
-	SIMP_PROP(DfltNetstrmDrvrCAF)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile)
 	SIMP_PROP(DfltNetstrmDrvrCertFile)
 #ifdef USE_UNLIMITED_SELECT
 	SIMP_PROP(FdSetSize)
 #endif
 #undef	SIMP_PROP
-#undef	SIMP_PROP_CNF
+#undef	SIMP_PROP2
 finalize_it:
 ENDobjQueryInterface(glbl)
 
@@ -963,8 +982,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 {
 	free(pszDfltNetstrmDrvr);
 	pszDfltNetstrmDrvr = NULL;
-	free(pszDfltNetstrmDrvrCAF);
-	pszDfltNetstrmDrvrCAF = NULL;
+	free(loadConf->globals.pszDfltNetstrmDrvrCAF);
+	loadConf->globals.pszDfltNetstrmDrvrCAF = NULL;
 	free(pszDfltNetstrmDrvrKeyFile);
 	pszDfltNetstrmDrvrKeyFile = NULL;
 	free(pszDfltNetstrmDrvrCertFile);
@@ -1364,17 +1383,8 @@ glblDoneLoadCnf(void)
 				pszDfltNetstrmDrvrCertFile = fn;
 			}
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercafile")) {
-			free(pszDfltNetstrmDrvrCAF);
-			uchar *const fn = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			fp = fopen((const char*)fn, "r");
-			if(fp == NULL) {
-				LogError(errno, RS_RET_NO_FILE_ACCESS,
-					"error: defaultnetstreamdrivercafile file '%s' "
-					"could not be accessed", fn);
-			} else {
-				fclose(fp);
-				pszDfltNetstrmDrvrCAF = fn;
-			}
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setDfltNetstrmDrvrCAF(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
 			free(pszDfltNetstrmDrvr);
 			pszDfltNetstrmDrvr = (uchar*)
@@ -1577,12 +1587,10 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugfile", 0, eCmdHdlrGetWord, setDebugFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setDebugLevel, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL,
-	&loadConf->globals.bDropMalPTRMsgs, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, SetDropMalPTRMsgs, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr,
 	NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, NULL,
-	&pszDfltNetstrmDrvrCAF, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, setDfltNetstrmDrvrCAF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, NULL,
 	&pszDfltNetstrmDrvrKeyFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, NULL,
@@ -1617,7 +1625,7 @@ ENDObjClassInit(glbl)
  */
 BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	free(pszDfltNetstrmDrvr);
-	free(pszDfltNetstrmDrvrCAF);
+	// free(pszDfltNetstrmDrvrCAF);
 	free(pszDfltNetstrmDrvrKeyFile);
 	free(pszDfltNetstrmDrvrCertFile);
 	free(LocalDomain);

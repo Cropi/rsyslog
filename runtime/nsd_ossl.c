@@ -53,6 +53,7 @@
 #include "nsdsel_ossl.h"
 #include "nsd_ossl.h"
 #include "unicode-helper.h"
+#include "rsconf.h"
 /* things to move to some better place/functionality - TODO */
 // #define CRLFILE "crl.pem"
 
@@ -1224,7 +1225,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	int bHaveKey;
 	const char *caFile, *certFile, *keyFile;
 	/* Setup certificates */
-	caFile = (char*) ((pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF() : pThis->pszCAFile);
+	caFile = (char*) ((pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile);
 	if(caFile == NULL) {
 		LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING,
 			"Warning: CA certificate is not set");

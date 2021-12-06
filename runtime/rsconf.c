@@ -168,6 +168,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.bDropMalPTRMsgs = 0;
 	pThis->globals.glblDebugOnShutdown = 0;
 	pThis->globals.iGnuTLSLoglevel = 0;
+	pThis->globals.pszDfltNetstrmDrvrCAF = NULL;
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
@@ -248,6 +249,7 @@ CODESTARTobjDestruct(rsconf)
 	free(pThis->globals.mainQ.pszMainMsgQFName);
 	free(pThis->globals.pszConfDAGFile);
 	free(pThis->globals.pszWorkDir);
+	free(pThis->globals.pszDfltNetstrmDrvrCAF);
 	lookupDestroyCnf();
 	llDestroy(&(pThis->rulesets.llRulesets));
 	ochDeleteAll();

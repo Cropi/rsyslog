@@ -697,7 +697,7 @@ gtlsInitCred(nsd_gtls_t *const pThis )
 	CHKgnutls(gnutls_certificate_allocate_credentials(&pThis->xcred));
 
 	/* sets the trusted cas file */
-	cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF() : pThis->pszCAFile;
+	cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile;
 	if(cafile == NULL) {
 		LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING,
 			"Warning: CA certificate is not set");

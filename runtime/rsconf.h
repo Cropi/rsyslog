@@ -82,6 +82,7 @@ struct globals_s {
 	int bDropMalPTRMsgs;/* Drop messages which have malicious PTR records during DNS lookup */
 	int glblDebugOnShutdown; /* start debug log when we are shut down */
 	int iGnuTLSLoglevel;/* Sets GNUTLS Debug Level */
+	uchar *pszDfltNetstrmDrvrCAF; /* default CA file for the netstrm driver */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
