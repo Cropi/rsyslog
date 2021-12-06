@@ -84,7 +84,7 @@ struct globals_s {
 	int iGnuTLSLoglevel;/* Sets GNUTLS Debug Level */
 	uchar *pszDfltNetstrmDrvrCAF; /* default CA file for the netstrm driver */
 	uchar *pszDfltNetstrmDrvrCertFile; /* default cert file for the netstrm driver (server) */
-
+	uchar *pszDfltNetstrmDrvrKeyFile; /* default key file for the netstrm driver (server) */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

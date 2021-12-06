@@ -1241,7 +1241,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	} else {
 		bHaveCert = 1;
 	}
-	keyFile = (char*) ((pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile() : pThis->pszKeyFile);
+	keyFile = (char*) ((pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile);
 	if(keyFile == NULL) {
 		LogMsg(0, RS_RET_CERTKEY_MISSING, LOG_WARNING,
 			"Warning: Key file is not set");
