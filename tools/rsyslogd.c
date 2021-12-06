@@ -320,7 +320,7 @@ checkStartupOK(void)
 		fprintf(stderr, "rsyslogd: error reading pid file, cannot start up\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	
+
 	/* ok, we got a pid, let's check if the process is running */
 	const pid_t pid = (pid_t) pf_pid;
 	if(kill(pid, 0) == 0 || errno != ESRCH) {
@@ -1592,7 +1592,7 @@ initAll(int argc, char **argv)
 		localRet = RS_RET_OK;
 	}
 	CHKiRet(localRet);
-	
+
 	CHKiRet(rsyslogd_InitStdRatelimiters());
 
 	if(bChDirRoot) {
@@ -1821,7 +1821,7 @@ rsyslogdDoDie(int sig)
 		abort();
 	}
 	bFinished = sig;
-	if(glblDebugOnShutdown) {
+	if(runConf->globals.glblDebugOnShutdown) {
 		/* kind of hackish - set to 0, so that debug_swith will enable
 		 * and AND emit the "start debug log" message.
 		 */
@@ -2019,7 +2019,7 @@ deinitAll(void)
 	/* close the inputs */
 	DBGPRINTF("Terminating input threads...\n");
 	glbl.SetGlobalInputTermination();
-	
+
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */

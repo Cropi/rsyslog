@@ -77,7 +77,6 @@ DEFobjCurrIf(net)
  * For this object, these variables are obviously what makes the "meat" of the
  * class...
  */
-int glblDebugOnShutdown = 0;	/* start debug log when we are shut down */
 #ifdef ENABLE_LIBLOGGING_STDLOG
 stdlog_channel_t stdlog_hdl = NULL;	/* handle to be used for stdlog */
 #endif
@@ -1406,8 +1405,8 @@ glblDoneLoadCnf(void)
 			setReportChildProcessExits((uchar*) tmp);
 			free((void*)tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "debug.onshutdown")) {
-			glblDebugOnShutdown = (int) cnfparamvals[i].val.d.n;
-			LogError(0, RS_RET_OK, "debug: onShutdown set to %d", glblDebugOnShutdown);
+			loadConf->globals.glblDebugOnShutdown = (int) cnfparamvals[i].val.d.n;
+			LogError(0, RS_RET_OK, "debug: onShutdown set to %d", loadConf->globals.glblDebugOnShutdown);
 		} else if(!strcmp(paramblk.descr[i].name, "debug.gnutls")) {
 			iGnuTLSLoglevel = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.unloadmodules")) {
@@ -1555,7 +1554,7 @@ glblDoneLoadCnf(void)
 		}
 	}
 
-	if(glblDebugOnShutdown && Debug != DEBUG_FULL) {
+	if(loadConf->globals.glblDebugOnShutdown && Debug != DEBUG_FULL) {
 		Debug = DEBUG_ONDEMAND;
 		stddbg = -1;
 	}
