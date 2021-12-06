@@ -117,7 +117,6 @@ static char **LocalHosts = NULL;
 /* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream driver */
 static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
-static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
 int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
 static uchar cCCEscapeChar = '#'; /* character to be used to start an escape sequence for control chars */
 static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
@@ -303,7 +302,7 @@ static dataType Get##nameFunc(rsconf_t *cnf) \
 SIMP_PROP2(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 /* We omit the setter on purpose as we want to customize it */
 SIMP_PROP_GET2(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
-/* TODO: use custom function which frees existing value */
+SIMP_PROP_GET2(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
 
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
@@ -322,8 +321,6 @@ SIMP_PROP(FdSetSize, iFdSetSize, int)
 
 SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) /* TODO: use custom function which frees existing value */
 SIMP_PROP_SET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*)
-/* TODO: use custom function which frees existing value */
-SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
 /* TODO: use custom function which frees existing value */
 
 #undef SIMP_PROP
@@ -472,6 +469,25 @@ setDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	} else {
 		fclose(fp);
 		loadConf->globals.pszDfltNetstrmDrvrCAF = pNewVal;
+	}
+
+	RETiRet;
+}
+
+static rsRetVal
+setDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	FILE *fp;
+
+	free(loadConf->globals.pszDfltNetstrmDrvrCertFile);
+	fp = fopen((const char*)pNewVal, "r");
+	if(fp == NULL) {
+		LogError(errno, RS_RET_NO_FILE_ACCESS,
+			"error: defaultnetstreamdrivercertfile '%s' "
+			"could not be accessed", pNewVal);
+	} else {
+		fclose(fp);
+		loadConf->globals.pszDfltNetstrmDrvrCertFile = pNewVal;
 	}
 
 	RETiRet;
@@ -886,11 +902,11 @@ GetDfltNetstrmDrvrKeyFile(void)
 
 
 /* return the current default netstream driver certificate File */
-static uchar*
-GetDfltNetstrmDrvrCertFile(void)
-{
-	return(pszDfltNetstrmDrvrCertFile);
-}
+// static uchar*
+// GetDfltNetstrmDrvrCertFile(void)
+// {
+// 	return(pszDfltNetstrmDrvrCertFile);
+// }
 
 
 /* [ar] Source IP for local client to be used on multihomed host */
@@ -942,6 +958,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->SetParseHOSTNAMEandTAG = setParseHOSTNAMEandTAG;
 	pIf->GetParseHOSTNAMEandTAG = getParseHOSTNAMEandTAG;
 	pIf->GetDfltNetstrmDrvrCAF = GetDfltNetstrmDrvrCAF;
+	pIf->GetDfltNetstrmDrvrCertFile = GetDfltNetstrmDrvrCertFile;
 #define SIMP_PROP2(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
@@ -966,7 +983,6 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(ParserEscapeControlCharactersCStyle)
 	SIMP_PROP(DfltNetstrmDrvr)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile)
-	SIMP_PROP(DfltNetstrmDrvrCertFile)
 #ifdef USE_UNLIMITED_SELECT
 	SIMP_PROP(FdSetSize)
 #endif
@@ -986,8 +1002,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	loadConf->globals.pszDfltNetstrmDrvrCAF = NULL;
 	free(pszDfltNetstrmDrvrKeyFile);
 	pszDfltNetstrmDrvrKeyFile = NULL;
-	free(pszDfltNetstrmDrvrCertFile);
-	pszDfltNetstrmDrvrCertFile = NULL;
+	free(loadConf->globals.pszDfltNetstrmDrvrCertFile);
+	loadConf->globals.pszDfltNetstrmDrvrCertFile = NULL;
 	free(LocalHostNameOverride);
 	LocalHostNameOverride = NULL;
 	free(oversizeMsgErrorFile);
@@ -1371,17 +1387,8 @@ glblDoneLoadCnf(void)
 				pszDfltNetstrmDrvrKeyFile = fn;
 			}
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercertfile")) {
-			free(pszDfltNetstrmDrvrCertFile);
-			uchar *const fn = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			fp = fopen((const char*)fn, "r");
-			if(fp == NULL) {
-				LogError(errno, RS_RET_NO_FILE_ACCESS,
-					"error: defaultnetstreamdrivercertfile '%s' "
-					"could not be accessed", fn);
-			} else {
-				fclose(fp);
-				pszDfltNetstrmDrvrCertFile = fn;
-			}
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setDfltNetstrmDrvrCertFile(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercafile")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setDfltNetstrmDrvrCAF(NULL, cstr);
@@ -1593,8 +1600,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, setDfltNetstrmDrvrCAF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, NULL,
 	&pszDfltNetstrmDrvrKeyFile, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, NULL,
-	&pszDfltNetstrmDrvrCertFile, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, setDfltNetstrmDrvrCertFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrGoneAway, NULL, NULL, NULL));
@@ -1627,7 +1633,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	free(pszDfltNetstrmDrvr);
 	// free(pszDfltNetstrmDrvrCAF);
 	free(pszDfltNetstrmDrvrKeyFile);
-	free(pszDfltNetstrmDrvrCertFile);
+	// free(pszDfltNetstrmDrvrCertFile);
 	free(LocalDomain);
 	free(LocalHostName);
 	free(LocalHostNameOverride);

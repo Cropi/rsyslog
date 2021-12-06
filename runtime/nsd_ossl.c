@@ -1233,7 +1233,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	} else {
 		bHaveCA	= 1;
 	}
-	certFile = (char*) ((pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile() : pThis->pszCertFile);
+	certFile = (char*) ((pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile);
 	if(certFile == NULL) {
 		LogMsg(0, RS_RET_CERT_MISSING, LOG_WARNING,
 			"Warning: Certificate file is not set");

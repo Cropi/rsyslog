@@ -190,7 +190,7 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile() : pThis->pszCertFile;
+	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile;
 	keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile() : pThis->pszKeyFile;
 
 	if(certFile == NULL || keyFile == NULL) {
@@ -611,7 +611,7 @@ gtlsAddOurCert(nsd_gtls_t *const pThis)
 	uchar *pGnuErr; /* for GnuTLS error reporting */
 	DEFiRet;
 
-	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile() : pThis->pszCertFile;
+	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile;
 	keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile() : pThis->pszKeyFile;
 	dbgprintf("GTLS certificate file: '%s'\n", certFile);
 	dbgprintf("GTLS key file: '%s'\n", keyFile);

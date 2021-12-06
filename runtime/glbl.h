@@ -60,6 +60,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 
 	SIMP_PROP2(DropMalPTRMsgs, int)
 	uchar* (*GetDfltNetstrmDrvrCAF)(rsconf_t *cnf);
+	uchar* (*GetDfltNetstrmDrvrCertFile)(rsconf_t *cnf);
 
 #define SIMP_PROP(name, dataType) \
 	dataType (*Get##name)(void); \
@@ -77,7 +78,6 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(LocalHosts, char**)
 	SIMP_PROP(DfltNetstrmDrvr, uchar*)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile, uchar*)
-	SIMP_PROP(DfltNetstrmDrvrCertFile, uchar*)
 	SIMP_PROP(ParserControlCharacterEscapePrefix, uchar)
 	SIMP_PROP(ParserDropTrailingLFOnReception, int)
 	SIMP_PROP(ParserEscapeControlCharactersOnReceive, int)
