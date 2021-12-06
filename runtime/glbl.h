@@ -53,13 +53,16 @@ extern stdlog_channel_t stdlog_hdl;
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	uchar* (*GetWorkDir)(rsconf_t *cnf);
 	int (*GetMaxLine)(void);
+#define SIMP_PROP_CNF(name, dataType) \
+	dataType (*Get##name)(rsconf_t *cnf); \
+	rsRetVal (*Set##name)(rsconf_t *cnf, dataType);
+	SIMP_PROP_CNF(DropMalPTRMsgs, int)
 #define SIMP_PROP(name, dataType) \
 	dataType (*Get##name)(void); \
 	rsRetVal (*Set##name)(dataType);
 	SIMP_PROP(OptimizeUniProc, int)
 	SIMP_PROP(PreserveFQDN, int)
 	SIMP_PROP(DefPFFamily, int)
-	SIMP_PROP(DropMalPTRMsgs, int)
 	SIMP_PROP(Option_DisallowWarning, int)
 	SIMP_PROP(DisableDNS, int)
 	SIMP_PROP(LocalFQDNName, uchar*)
@@ -104,6 +107,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetSourceIPofLocalClient)(uchar*);		/* [ar] */
 	/* v9 - 2015-01-12  SetMaxLine method removed */
 #undef	SIMP_PROP
+#undef	SIMP_PROP_CNF
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
 /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */

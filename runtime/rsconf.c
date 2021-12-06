@@ -165,6 +165,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->actions.nbrActions = 0;
 	pThis->globals.pszWorkDir = NULL;
 	pThis->globals.operatingStateFile = NULL;
+	pThis->globals.bDropMalPTRMsgs = 0;
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
@@ -269,7 +270,7 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	dbgprintf("  bErrMsgToStderr.....................: %d\n",
 		  pThis->globals.bErrMsgToStderr);
 	dbgprintf("  drop Msgs with malicious PTR Record : %d\n",
-		  glbl.GetDropMalPTRMsgs());
+		  glbl.GetDropMalPTRMsgs(pThis));
 	ruleset.DebugPrintAll(pThis);
 	dbgprintf("\n");
 	if(pThis->globals.bDebugPrintTemplateList)

@@ -103,7 +103,6 @@ static int reportOversizeMsg = 1;	/* shall error messages be generated for overs
 static int reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 static int iGnuTLSLoglevel = 0;		/* Sets GNUTLS Debug Level */
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
-static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalIPIF = NULL;/* IP address to report for the local host (default is 127.0.0.1) */
@@ -289,9 +288,24 @@ static dataType Get##nameFunc(void) \
 	return(nameVar); \
 }
 
+#define SIMP_PROP_CNF(nameFunc, nameVar, dataType) \
+	SIMP_PROP_GET_CNF(nameFunc, nameVar, dataType) \
+	SIMP_PROP_SET_CNF(nameFunc, nameVar, dataType)
+#define SIMP_PROP_SET_CNF(nameFunc, nameVar, dataType) \
+static rsRetVal Set##nameFunc(rsconf_t *cnf, dataType newVal) \
+{ \
+	cnf->globals.nameVar = newVal; \
+	return RS_RET_OK; \
+}
+#define SIMP_PROP_GET_CNF(nameFunc, nameVar, dataType) \
+static dataType Get##nameFunc(rsconf_t *cnf) \
+{ \
+	return(cnf->globals.nameVar); \
+}
+
+SIMP_PROP_CNF(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
-SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
 SIMP_PROP(ParserControlCharacterEscapePrefix, cCCEscapeChar, uchar)
@@ -317,6 +331,9 @@ SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
 #undef SIMP_PROP_SET
 #undef SIMP_PROP_GET
 
+#undef SIMP_PROP_CNF
+#undef SIMP_PROP_SET_CNF
+#undef SIMP_PROP_GET_CNF
 
 /* return global input termination status
  * rgerhards, 2009-07-20
@@ -908,11 +925,14 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
 	pIf->SetParseHOSTNAMEandTAG = setParseHOSTNAMEandTAG;
 	pIf->GetParseHOSTNAMEandTAG = getParseHOSTNAMEandTAG;
+#define SIMP_PROP_CNF(name) \
+	pIf->Get##name = Get##name; \
+	pIf->Set##name = Set##name;
+	SIMP_PROP_CNF(DropMalPTRMsgs);
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
 	SIMP_PROP(PreserveFQDN);
-	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(mainqCnfObj);
 	SIMP_PROP(LocalFQDNName)
 	SIMP_PROP(LocalHostName)
@@ -934,6 +954,7 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(FdSetSize)
 #endif
 #undef	SIMP_PROP
+#undef	SIMP_PROP_CNF
 finalize_it:
 ENDobjQueryInterface(glbl)
 
@@ -960,7 +981,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	loadConf->globals.pszWorkDir = NULL;
 	free((void*)loadConf->globals.operatingStateFile);
 	loadConf->globals.operatingStateFile = NULL;
-	bDropMalPTRMsgs = 0;
+	loadConf->globals.bDropMalPTRMsgs = 0;
 	bPreserveFQDN = 0;
 	iMaxLine = 8192;
 	cCCEscapeChar = '#';
@@ -1364,7 +1385,7 @@ glblDoneLoadCnf(void)
 			bPreserveFQDN = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name,
 				"dropmsgswithmaliciousdnsptrrecords")) {
-			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {
 			bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspensioncontinuation")) {
@@ -1559,7 +1580,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setDebugLevel, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL,
-	&bDropMalPTRMsgs, NULL));
+	&loadConf->globals.bDropMalPTRMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr,
 	NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, NULL,

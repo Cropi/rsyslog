@@ -44,6 +44,7 @@
 #include "hashtable.h"
 #include "prop.h"
 #include "dnscache.h"
+#include "rsconf.h"
 
 /* module data structures */
 struct dnscache_entry_s {
@@ -259,7 +260,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 	char fqdnBuf[NI_MAXHOST];
 	rs_size_t fqdnLen;
 	rs_size_t i;
-	
+
 	error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *)addr),
 			    (char*) szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
 	if(error) {
@@ -294,7 +295,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 				 * time being, we simply drop the name we obtained and use the IP - that one
 				 * is OK in any way. We do also log the error message. rgerhards, 2007-07-16
 		 		 */
-		 		if(glbl.GetDropMalPTRMsgs() == 1) {
+		 		if(glbl.GetDropMalPTRMsgs(runConf) == 1) {
 					LogError(0, RS_RET_MALICIOUS_ENTITY,
 						 "Malicious PTR record, message dropped "
 						 "IP = \"%s\" HOST = \"%s\"",

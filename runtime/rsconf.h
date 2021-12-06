@@ -79,6 +79,7 @@ struct globals_s {
 	uchar *pszConfDAGFile;	/* name of config DAG file, non-NULL means generate one */
 	uchar *pszWorkDir;
 	uchar *operatingStateFile;
+	int bDropMalPTRMsgs;/* Drop messages which have malicious PTR records during DNS lookup */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
