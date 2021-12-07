@@ -189,6 +189,13 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.pACLAddHostnameOnFail = 0;
 	pThis->globals.pACLDontResolve = 0;
 	pThis->globals.bDisableDNS = 0;
+	pThis->globals.bProcessInternalMessages = 0;
+
+	/* handle environment variables */
+	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
+	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
+		pThis->globals.bProcessInternalMessages = 1;
+
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;

@@ -47,7 +47,6 @@
 #define REPORT_CHILD_PROCESS_EXITS_ALL 2
 
 extern pid_t glbl_ourpid;
-extern int bProcessInternalMessages;
 extern int bPermitSlashInProgramname;
 #ifdef ENABLE_LIBLOGGING_STDLOG
 extern stdlog_channel_t stdlog_hdl;

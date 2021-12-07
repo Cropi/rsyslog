@@ -82,10 +82,6 @@ static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later 
 	#define DFLT_INT_MSGS_SEV_FILTER 6	/* Warning level and more important */
 #endif
 int glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;/* filter for logging internal messages by syslog sev. */
-int bProcessInternalMessages = 0;	/* Should rsyslog itself process internal messages?
-					 * 1 - yes
-					 * 0 - send them to libstdlog (e.g. to push to journal) or syslog()
-					 */
 #ifdef ENABLE_LIBLOGGING_STDLOG
 static uchar *stdlog_chanspec = NULL;
 #endif
@@ -1205,7 +1201,7 @@ glblProcessCnf(struct cnfobj *o)
 		if(!cnfparamvals[i].bUsed)
 			continue;
 		if(!strcmp(paramblk.descr[i].name, "processinternalmessages")) {
-			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
 			cnfparamvals[i].bUsed = TRUE;
 		} else if(!strcmp(paramblk.descr[i].name, "internal.developeronly.options")) {
 			glblDevOptions = (uint64_t) cnfparamvals[i].val.d.n;

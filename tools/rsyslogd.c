@@ -852,7 +852,7 @@ logmsgInternal_doWrite(smsg_t *pMsg)
 {
 	const int pri = getPRIi(pMsg);
 	if(pri % 8 <= glblIntMsgsSeverityFilter) {
-		if(bProcessInternalMessages) {
+		if(runConf->globals.bProcessInternalMessages) {
 			submitMsg2(pMsg);
 			pMsg = NULL; /* msg obj handed over; do not destruct */
 		} else {
@@ -2138,9 +2138,6 @@ main(int argc, char **argv)
 	/* disable case-sensitive comparisons in variable subsystem: */
 	fjson_global_do_case_sensitive_comparison(0);
 
-	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
-	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
-		bProcessInternalMessages = 1;
 	dbgClassInit();
 	initAll(argc, argv);
 #ifdef HAVE_LIBSYSTEMD
