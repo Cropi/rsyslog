@@ -115,8 +115,6 @@ static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - 
 static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
 static int bEscapeTab = 1; /* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
 static int bParserEscapeCCCStyle = 0; /* escape control characters in c style: 0 - no, 1 - yes */
-int glblSenderStatsTimeout = 12 * 60 * 60; /* 12 hr timeout for senders */
-int glblSenderKeepTrack = 0;  /* keep track of known senders? */
 int glblUnloadModules = 1;
 int bPermitSlashInProgramname = 0;
 int glblIntMsgRateLimitItv = 5;
@@ -1489,9 +1487,9 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "senders.reportgoneaway")) {
 			loadConf->globals.glblReportGoneAwaySenders = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "senders.timeoutafter")) {
-			glblSenderStatsTimeout = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.glblSenderStatsTimeout = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "senders.keeptrack")) {
-			glblSenderKeepTrack = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.glblSenderKeepTrack = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "inputs.timeout.shutdown")) {
 			glblInputTimeoutShutdown = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.keepsupplemental")) {

@@ -181,6 +181,8 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.janitorInterval = 10;
 	pThis->globals.glblReportNewSenders = 0;
 	pThis->globals.glblReportGoneAwaySenders = 0;
+	pThis->globals.glblSenderStatsTimeout = 12 * 60 * 60;
+	pThis->globals.glblSenderKeepTrack = 0;
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;

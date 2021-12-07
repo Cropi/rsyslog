@@ -49,7 +49,7 @@
 #include "prop.h"
 #include "ratelimit.h"
 #include "debug.h"
-
+#include "rsconf.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -236,7 +236,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	const tcpLstnParams_t *const cnf_params = pThis->pLstnInfo->cnf_params;
-	
+
 	if(pThis->iMsg == 0) {
 		DBGPRINTF("discarding zero-sized message\n");
 		FINALIZE;
@@ -291,7 +291,7 @@ PrepareClose(tcps_sess_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	
+
 	if(pThis->inputState == eAtStrtFram) {
 		/* this is how it should be. There is no unprocessed
 		 * data left and such we have nothing to do. For simplicity
@@ -544,7 +544,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen)
 	}
 	iRet = multiSubmitFlush(&multiSub);
 
-	if(glblSenderKeepTrack)
+	if(runConf->globals.glblSenderKeepTrack)
 		statsRecordSender(propGetSzStr(pThis->fromHost), nMsgs, ttGenTime);
 
 finalize_it:

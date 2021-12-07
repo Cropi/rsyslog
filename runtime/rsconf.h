@@ -95,6 +95,8 @@ struct globals_s {
 	short janitorInterval; /* interval (in minutes) at which the janitor runs */
 	int glblReportNewSenders;
 	int glblReportGoneAwaySenders;
+	int glblSenderStatsTimeout; /* 12 hr timeout for senders */
+	int glblSenderKeepTrack; /* keep track of known senders? */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

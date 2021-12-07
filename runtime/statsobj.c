@@ -641,7 +641,7 @@ checkGoneAwaySenders(const time_t tCurr)
 {
 	struct hashtable_itr *itr = NULL;
 	struct sender_stats *stat;
-	const time_t rqdLast = tCurr - glblSenderStatsTimeout;
+	const time_t rqdLast = tCurr - runConf->globals.glblSenderStatsTimeout;
 	struct tm tm;
 
 	pthread_mutex_lock(&mutSenders);
