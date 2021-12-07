@@ -42,6 +42,10 @@
 #define glblOversizeMsgInputMode_Split 1
 #define glblOversizeMsgInputMode_Accept 2
 
+#define REPORT_CHILD_PROCESS_EXITS_NONE 0
+#define REPORT_CHILD_PROCESS_EXITS_ERRORS 1
+#define REPORT_CHILD_PROCESS_EXITS_ALL 2
+
 extern pid_t glbl_ourpid;
 extern int bProcessInternalMessages;
 extern int bPermitSlashInProgramname;
@@ -167,6 +171,6 @@ uchar* glblGetOversizeMsgErrorFile(rsconf_t *cnf);
 const uchar* glblGetOperatingStateFile(rsconf_t *cnf);
 int glblGetOversizeMsgInputMode(rsconf_t *cnf);
 int glblReportOversizeMessage(rsconf_t *cnf);
-void glblReportChildProcessExit(const uchar *name, pid_t pid, int status);
+void glblReportChildProcessExit(rsconf_t *cnf, const uchar *name, pid_t pid, int status);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

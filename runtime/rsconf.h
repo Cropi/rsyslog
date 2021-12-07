@@ -89,6 +89,7 @@ struct globals_s {
 	uchar * oversizeMsgErrorFile;		/* File where oversize messages are written to */
 	int reportOversizeMsg; /* shall error messages be generated for oversize messages? */
 	int oversizeMsgInputMode; /* Mode which oversize messages will be forwarded */
+	int reportChildProcessExits;
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

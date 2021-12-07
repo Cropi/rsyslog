@@ -1935,7 +1935,7 @@ reapChild(void)
 		int status;
 		child = waitpid(-1, &status, WNOHANG);
 		if(child != -1 && child != 0) {
-			glblReportChildProcessExit(NULL, child, status);
+			glblReportChildProcessExit(runConf, NULL, child, status);
 		}
 	} while(child > 0);
 }

@@ -59,10 +59,6 @@
 #include "dnscache.h"
 #include "parser.h"
 
-#define REPORT_CHILD_PROCESS_EXITS_NONE 0
-#define REPORT_CHILD_PROCESS_EXITS_ERRORS 1
-#define REPORT_CHILD_PROCESS_EXITS_ALL 2
-
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
 #	define DFLT_NETSTRM_DRVR ((uchar*)"ptcp")
@@ -96,7 +92,6 @@ static uchar *stdlog_chanspec = NULL;
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
-static int reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
@@ -584,11 +579,11 @@ setReportChildProcessExits(const uchar *const mode)
 {
 	DEFiRet;
 	if(!strcmp((char*)mode, "none")) {
-		reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_NONE;
+		loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_NONE;
 	} else if(!strcmp((char*)mode, "errors")) {
-		reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+		loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 	} else if(!strcmp((char*)mode, "all")) {
-		reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ALL;
+		loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ALL;
 	} else {
 		LogError(0, RS_RET_CONF_PARAM_INVLD,
 				"invalid value '%s' for global parameter reportChildProcessExits -- ignored",
@@ -749,12 +744,12 @@ glblReportOversizeMessage(rsconf_t *cnf)
  * If name != NULL, prints it as the program name.
  */
 void
-glblReportChildProcessExit(const uchar *name, pid_t pid, int status)
+glblReportChildProcessExit(rsconf_t *cnf, const uchar *name, pid_t pid, int status)
 {
 	DBGPRINTF("waitpid for child %ld returned status: %2.2x\n", (long) pid, status);
 
-	if(reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_NONE
-		|| (reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_ERRORS
+	if(cnf->globals.reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_NONE
+		|| (cnf->globals.reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_ERRORS
 			&& WIFEXITED(status) && WEXITSTATUS(status) == 0)) {
 		return;
 	}
@@ -1036,7 +1031,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	free(loadConf->globals.oversizeMsgErrorFile);
 	loadConf->globals.oversizeMsgErrorFile = NULL;
 	loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
-	reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+	loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 	free(loadConf->globals.pszWorkDir);
 	loadConf->globals.pszWorkDir = NULL;
 	free((void*)loadConf->globals.operatingStateFile);
