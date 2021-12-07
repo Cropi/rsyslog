@@ -87,6 +87,7 @@ struct globals_s {
 	uchar *pszDfltNetstrmDrvrKeyFile; /* default key file for the netstrm driver (server) */
 	uchar *pszDfltNetstrmDrvr; /* module name of default netstream driver */
 	uchar * oversizeMsgErrorFile;		/* File where oversize messages are written to */
+	int reportOversizeMsg; /* shall error messages be generated for oversize messages? */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

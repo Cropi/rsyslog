@@ -97,7 +97,6 @@ static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup pa
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
 static int oversizeMsgInputMode = 0;	/* Mode which oversize messages will be forwarded */
-static int reportOversizeMsg = 1;	/* shall error messages be generated for oversize messages? */
 static int reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
@@ -739,9 +738,10 @@ glblGetOversizeMsgInputMode(void)
 }
 
 int
-glblReportOversizeMessage(void)
+glblReportOversizeMessage(rsconf_t *cnf)
 {
-	return reportOversizeMsg;
+	assert(cnf != NULL);
+	return cnf->globals.reportOversizeMsg;
 }
 
 
@@ -1046,7 +1046,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMaxLine = 8192;
 	cCCEscapeChar = '#';
 	bDropTrailingLF = 1;
-	reportOversizeMsg = 1;
+	loadConf->globals.reportOversizeMsg = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bSpaceLFOnRcv = 0;
 	bEscape8BitChars = 0; /* default is not to escape control characters */
@@ -1427,7 +1427,7 @@ glblDoneLoadCnf(void)
 			free(loadConf->globals.oversizeMsgErrorFile);
 			loadConf->globals.oversizeMsgErrorFile = (uchar*)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "oversizemsg.report")) {
-			reportOversizeMsg = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.reportOversizeMsg = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "oversizemsg.input.mode")) {
 			const char *const tmp = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setOversizeMsgInputMode((uchar*) tmp);

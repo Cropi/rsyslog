@@ -1052,7 +1052,7 @@ submitMsg2(smsg_t *pMsg)
 		uchar *rawmsg;
 		int dummy;
 		getRawMsg(pMsg, &rawmsg, &dummy);
-		if(glblReportOversizeMessage()) {
+		if(glblReportOversizeMessage(runConf)) {
 			LogMsg(0, RS_RET_OVERSIZE_MSG, LOG_WARNING,
 				"message too long (%d) with configured size %d, begin of "
 				"message is: %.80s",

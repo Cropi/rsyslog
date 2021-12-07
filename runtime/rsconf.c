@@ -173,6 +173,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.pszDfltNetstrmDrvrKeyFile = NULL;
 	pThis->globals.pszDfltNetstrmDrvr = NULL;
 	pThis->globals.oversizeMsgErrorFile = NULL;
+	pThis->globals.reportOversizeMsg = 1;
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;

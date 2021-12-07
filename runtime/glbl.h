@@ -166,7 +166,7 @@ int bs_arrcmp_glblDbgFiles(const void *s1, const void *s2);
 uchar* glblGetOversizeMsgErrorFile(rsconf_t *cnf);
 const uchar* glblGetOperatingStateFile(rsconf_t *cnf);
 int glblGetOversizeMsgInputMode(void);
-int glblReportOversizeMessage(void);
+int glblReportOversizeMessage(rsconf_t *cnf);
 void glblReportChildProcessExit(const uchar *name, pid_t pid, int status);
 
 #endif /* #ifndef GLBL_H_INCLUDED */
