@@ -172,6 +172,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.pszDfltNetstrmDrvrCertFile = NULL;
 	pThis->globals.pszDfltNetstrmDrvrKeyFile = NULL;
 	pThis->globals.pszDfltNetstrmDrvr = NULL;
+	pThis->globals.oversizeMsgErrorFile = NULL;
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
@@ -256,6 +257,7 @@ CODESTARTobjDestruct(rsconf)
 	free(pThis->globals.pszDfltNetstrmDrvrCertFile);
 	free(pThis->globals.pszDfltNetstrmDrvrKeyFile);
 	free(pThis->globals.pszDfltNetstrmDrvr);
+	free(pThis->globals.oversizeMsgErrorFile);
 	lookupDestroyCnf();
 	llDestroy(&(pThis->rulesets.llRulesets));
 	ochDeleteAll();

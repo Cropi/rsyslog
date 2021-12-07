@@ -96,7 +96,6 @@ static uchar *stdlog_chanspec = NULL;
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
-static uchar * oversizeMsgErrorFile = NULL;		/* File where oversize messages are written to */
 static int oversizeMsgInputMode = 0;	/* Mode which oversize messages will be forwarded */
 static int reportOversizeMsg = 1;	/* shall error messages be generated for oversize messages? */
 static int reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
@@ -297,7 +296,7 @@ static dataType Get##nameFunc(rsconf_t *cnf) \
 	assert(cnf != NULL); \
 	if (cnf == NULL) \
 		LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED, \
-			"[%s]%d - %s: KIBASZOTT\n", __FILE__, __LINE__,  __func__); \
+			"[%s]%d - %s: BAD NEWS\n", __FILE__, __LINE__,  __func__); \
 	return(cnf->globals.nameVar); \
 }
 
@@ -719,9 +718,10 @@ done:
 /* return the name of the file where oversize messages are written to
  */
 uchar*
-glblGetOversizeMsgErrorFile(void)
+glblGetOversizeMsgErrorFile(rsconf_t *cnf)
 {
-	return oversizeMsgErrorFile;
+	assert(cnf != NULL);
+	return cnf->globals.oversizeMsgErrorFile;
 }
 
 const uchar*
@@ -1033,8 +1033,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	loadConf->globals.pszDfltNetstrmDrvrCertFile = NULL;
 	free(LocalHostNameOverride);
 	LocalHostNameOverride = NULL;
-	free(oversizeMsgErrorFile);
-	oversizeMsgErrorFile = NULL;
+	free(loadConf->globals.oversizeMsgErrorFile);
+	loadConf->globals.oversizeMsgErrorFile = NULL;
 	oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
 	reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 	free(loadConf->globals.pszWorkDir);
@@ -1424,8 +1424,8 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
 			setMaxLine(cnfparamvals[i].val.d.n);
 		} else if(!strcmp(paramblk.descr[i].name, "oversizemsg.errorfile")) {
-			free(oversizeMsgErrorFile);
-			oversizeMsgErrorFile = (uchar*)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			free(loadConf->globals.oversizeMsgErrorFile);
+			loadConf->globals.oversizeMsgErrorFile = (uchar*)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "oversizemsg.report")) {
 			reportOversizeMsg = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "oversizemsg.input.mode")) {
@@ -1652,7 +1652,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	free(LocalDomain);
 	free(LocalHostName);
 	free(LocalHostNameOverride);
-	free(oversizeMsgErrorFile);
+	// free(oversizeMsgErrorFile);
 	free(LocalFQDNName);
 	freeTimezoneInfo();
 	objRelease(prop, CORE_COMPONENT);

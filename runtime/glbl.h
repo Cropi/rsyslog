@@ -163,7 +163,7 @@ tzinfo_t* glblFindTimezoneInfo(char *id);
 int GetGnuTLSLoglevel(rsconf_t *cnf);
 int glblGetMaxLine(void);
 int bs_arrcmp_glblDbgFiles(const void *s1, const void *s2);
-uchar* glblGetOversizeMsgErrorFile(void);
+uchar* glblGetOversizeMsgErrorFile(rsconf_t *cnf);
 const uchar* glblGetOperatingStateFile(rsconf_t *cnf);
 int glblGetOversizeMsgInputMode(void);
 int glblReportOversizeMessage(void);
