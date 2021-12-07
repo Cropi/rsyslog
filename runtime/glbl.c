@@ -1413,9 +1413,9 @@ glblDoneLoadCnf(void)
 				"dropmsgswithmaliciousdnsptrrecords")) {
 			loadConf->globals.bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {
-			bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspensioncontinuation")) {
-			bActionReportSuspensionCont = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.bActionReportSuspensionCont = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
 			setMaxLine(cnfparamvals[i].val.d.n);
 		} else if(!strcmp(paramblk.descr[i].name, "oversizemsg.errorfile")) {

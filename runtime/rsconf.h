@@ -90,6 +90,8 @@ struct globals_s {
 	int reportOversizeMsg; /* shall error messages be generated for oversize messages? */
 	int oversizeMsgInputMode; /* Mode which oversize messages will be forwarded */
 	int reportChildProcessExits;
+	int bActionReportSuspension;
+	int bActionReportSuspensionCont;
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
