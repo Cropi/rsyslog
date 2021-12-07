@@ -96,10 +96,6 @@ struct AllowedSenders *pAllowedSenders_GSS = NULL;
 static struct AllowedSenders *pLastAllowedSenders_GSS = NULL;
 #endif
 
-int     ACLAddHostnameOnFail = 0; /* add hostname to acl when DNS resolving has failed */
-int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it to IP(s) */
-
-
 /* ------------------------------ begin permitted peers code ------------------------------ */
 
 
@@ -676,7 +672,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 
 		if (!strchr (iAllow->addr.HostWildcard, '*') &&
 		    !strchr (iAllow->addr.HostWildcard, '?') &&
-		    ACLDontResolve == 0) {
+		    loadConf->globals.pACLDontResolve == 0) {
 			/* single host - in this case, we pull its IP addresses from DNS
 			* and add IP-based ACLs.
 			*/
@@ -693,7 +689,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			if (getaddrinfo (iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
 			        LogError(0, NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
 
-				if (ACLAddHostnameOnFail) {
+				if (loadConf->globals.pACLAddHostnameOnFail) {
 					LogError(0, NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard "
 						"entry.", iAllow->addr.HostWildcard);
 					iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
@@ -1691,9 +1687,6 @@ CODESTARTobjQueryInterface(net)
 	pIf->CmpHost = CmpHost;
 	pIf->HasRestrictions = HasRestrictions;
 	pIf->GetIFIPAddr = getIFIPAddr;
-	/* data members */
-	pIf->pACLAddHostnameOnFail = &ACLAddHostnameOnFail;
-	pIf->pACLDontResolve = &ACLDontResolve;
 finalize_it:
 ENDobjQueryInterface(net)
 

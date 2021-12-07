@@ -1489,9 +1489,9 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "security.abortonidresolutionfail")) {
 			loadConf->globals.abortOnIDResolutionFail = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.acladdhostnameonfail")) {
-			*(net.pACLAddHostnameOnFail) = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.pACLAddHostnameOnFail = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.aclresolvehostname")) {
-			*(net.pACLDontResolve) = !((int) cnfparamvals[i].val.d.n);
+			loadConf->globals.pACLDontResolve = !((int) cnfparamvals[i].val.d.n);
 		} else if(!strcmp(paramblk.descr[i].name, "net.enabledns")) {
 			setDisableDNS(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "net.permitwarning")) {

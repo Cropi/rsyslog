@@ -1475,13 +1475,13 @@ initAll(int argc, char **argv)
 			fprintf (stderr, "rsyslogd: the -q command line option will go away "
 				 "soon.\nPlease use the global(net.aclAddHostnameOnFail=\"on\") "
 				 "configuration parameter instead.\n");
-		        *(net.pACLAddHostnameOnFail) = 1;
+		        // *(net.pACLAddHostnameOnFail) = 1; TODO
 		        break;
 		case 'Q':               /* dont resolve hostnames in ACL to IPs */
 			fprintf (stderr, "rsyslogd: the -Q command line option will go away "
 				 "soon.\nPlease use the global(net.aclResolveHostname=\"off\") "
 				 "configuration parameter instead.\n");
-		        *(net.pACLDontResolve) = 1;
+		        // *(net.pACLDontResolve) = 1; TODO
 		        break;
 		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
 			if(arg == NULL) {
