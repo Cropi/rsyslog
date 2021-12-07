@@ -390,6 +390,7 @@ setInstParamDefaults(instanceData *pData)
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
+	pModConf->pConf = pConf;
 	pModConf->tlslib = NULL;
 	/* create our relp engine */
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
@@ -583,7 +584,7 @@ doConnect(wrkrInstanceData_t *const pWrkrData)
 	DEFiRet;
 
 	if(pWrkrData->bInitialConnect) {
-		iRet = relpCltConnect(pWrkrData->pRelpClt, glbl.GetDefPFFamily(),
+		iRet = relpCltConnect(pWrkrData->pRelpClt, glbl.GetDefPFFamily(runModConf->pConf),
 				      getRelpPt(pWrkrData->pData), pWrkrData->pData->target);
 		if(iRet == RELP_RET_OK)
 			pWrkrData->bInitialConnect = 0;

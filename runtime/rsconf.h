@@ -98,6 +98,7 @@ struct globals_s {
 	int glblSenderStatsTimeout; /* 12 hr timeout for senders */
 	int glblSenderKeepTrack; /* keep track of known senders? */
 	int glblInputTimeoutShutdown; /* input shutdown timeout in ms */
+	int iDefPFFamily; /* protocol family (IPv4, IPv6 or both) */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

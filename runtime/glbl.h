@@ -63,6 +63,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Set##name)(dataType);
 
 	SIMP_PROP2(DropMalPTRMsgs, int)
+	SIMP_PROP2(DefPFFamily, int)
 	uchar* (*GetDfltNetstrmDrvrCAF)(rsconf_t *cnf);
 	uchar* (*GetDfltNetstrmDrvrCertFile)(rsconf_t *cnf);
 	uchar* (*GetDfltNetstrmDrvrKeyFile)(rsconf_t *cnf);
@@ -73,7 +74,6 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Set##name)(dataType);
 	SIMP_PROP(OptimizeUniProc, int)
 	SIMP_PROP(PreserveFQDN, int)
-	SIMP_PROP(DefPFFamily, int)
 	SIMP_PROP(Option_DisallowWarning, int)
 	SIMP_PROP(DisableDNS, int)
 	SIMP_PROP(LocalFQDNName, uchar*)

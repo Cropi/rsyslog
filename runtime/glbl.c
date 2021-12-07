@@ -92,7 +92,6 @@ static uchar *stdlog_chanspec = NULL;
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
-static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalIPIF = NULL;/* IP address to report for the local host (default is 127.0.0.1) */
@@ -288,6 +287,7 @@ static dataType Get##nameFunc(rsconf_t *cnf) \
 }
 
 SIMP_PROP2(DropMalPTRMsgs, bDropMalPTRMsgs, int)
+SIMP_PROP2(DefPFFamily, iDefPFFamily, int)
 /* We omit the setter on purpose as we want to customize it */
 SIMP_PROP_GET2(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
 SIMP_PROP_GET2(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
@@ -626,20 +626,6 @@ getParseHOSTNAMEandTAG(void)
 	return bParseHOSTNAMEandTAG;
 }
 
-static rsRetVal
-setDefPFFamily(int level)
-{
-	DEFiRet;
-	iDefPFFamily = level;
-	RETiRet;
-}
-
-static int
-getDefPFFamily(void)
-{
-	return iDefPFFamily;
-}
-
 /* return our local IP.
  * If no local IP is set, "127.0.0.1" is selected *and* set. This
  * is an intensional side effect that we do in order to keep things
@@ -964,8 +950,6 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
 	pIf->GetSourceIPofLocalClient = GetSourceIPofLocalClient;	/* [ar] */
 	pIf->SetSourceIPofLocalClient = SetSourceIPofLocalClient;	/* [ar] */
-	pIf->SetDefPFFamily = setDefPFFamily;
-	pIf->GetDefPFFamily = getDefPFFamily;
 	pIf->SetDisableDNS = setDisableDNS;
 	pIf->GetDisableDNS = getDisableDNS;
 	pIf->GetMaxLine = glblGetMaxLine;
@@ -981,6 +965,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
 	SIMP_PROP2(DropMalPTRMsgs)
+	SIMP_PROP2(DefPFFamily)
 
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
@@ -1471,11 +1456,11 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "net.ipprotocol")) {
 			char *proto = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			if(!strcmp(proto, "unspecified")) {
-				iDefPFFamily = PF_UNSPEC;
+				loadConf->globals.iDefPFFamily = PF_UNSPEC;
 			} else if(!strcmp(proto, "ipv4-only")) {
-				iDefPFFamily = PF_INET;
+				loadConf->globals.iDefPFFamily = PF_INET;
 			} else if(!strcmp(proto, "ipv6-only")) {
-				iDefPFFamily = PF_INET6;
+				loadConf->globals.iDefPFFamily = PF_INET6;
 			} else{
 				LogError(0, RS_RET_ERR, "invalid net.ipprotocol "
 					"parameter '%s' -- ignored", proto);

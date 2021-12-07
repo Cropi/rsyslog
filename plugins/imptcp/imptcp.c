@@ -549,7 +549,7 @@ startupSrv(ptcpsrv_t *pSrv)
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_PASSIVE;
-	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_family = glbl.GetDefPFFamily(runModConf->pConf);
 	hints.ai_socktype = SOCK_STREAM;
 
 	error = getaddrinfo((char*)pSrv->lstnIP, (char*) pSrv->port, &hints, &res);

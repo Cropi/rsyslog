@@ -582,7 +582,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 	memset(&hints, 0, sizeof(hints));
 	/* port must be numeric, because config file syntax requires this */
 	hints.ai_flags = AI_NUMERICSERV;
-	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_family = glbl.GetDefPFFamily(runModConf->pConf);
 	hints.ai_socktype = SOCK_DGRAM;
 	if((iErr = (getaddrinfo((char*)pData->host, (char*)getFwdPt(pData), &hints, &res))) != 0) {
 		DBGPRINTF("could not get addrinfo for hostname '%s':'%s': %d%s\n",

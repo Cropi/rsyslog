@@ -33,6 +33,7 @@
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -184,6 +185,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.glblSenderStatsTimeout = 12 * 60 * 60;
 	pThis->globals.glblSenderKeepTrack = 0;
 	pThis->globals.glblInputTimeoutShutdown = 1000;
+	pThis->globals.iDefPFFamily = PF_UNSPEC;
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;

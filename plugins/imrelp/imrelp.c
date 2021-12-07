@@ -379,7 +379,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))imrelp_dbgprintf));
-		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily()));
+		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily(runModConf->pConf)));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv2(pRelpEngine, onSyslogRcv));
 		CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));

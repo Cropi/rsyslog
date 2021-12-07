@@ -62,6 +62,7 @@
 #include "net.h"
 #include "dnscache.h"
 #include "prop.h"
+#include "rsconf.h"
 
 #ifdef OS_SOLARIS
 #include <arpa/nameser_compat.h>
@@ -494,10 +495,10 @@ finalize_it:
  */
 static void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
 	register uint8_t i;
-	
+
 	assert (addr != NULL);
 	assert (bits <= 128);
-	
+
 	i = bits/32;
 	if (bits%32)
 		addr->s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
@@ -506,10 +507,10 @@ static void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
 }
 
 static void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
-	
+
 	assert (addr != NULL);
 	assert (bits <=32 );
-	
+
 	addr->s_addr &= htonl(0xffffffff << (32 - bits));
 }
 
@@ -556,11 +557,11 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
 	if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders))) == NULL) {
 		return RS_RET_OUT_OF_MEMORY; /* no options left :( */
 	}
-	
+
 	memcpy(&(pEntry->allowedSender), iAllow, sizeof (struct NetAddr));
 	pEntry->pNext = NULL;
 	pEntry->SignificantBits = iSignificantBits;
-	
+
 	/* enqueue */
 	if(*ppRoot == NULL) {
 		*ppRoot = pEntry;
@@ -568,7 +569,7 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
 		(*ppLast)->pNext = pEntry;
 	}
 	*ppLast = pEntry;
-	
+
 	return RS_RET_OK;
 }
 
@@ -585,7 +586,7 @@ clearAllowedSenders(uchar *pszType)
 
 	if(setAllowRoot(&pCurr, pszType) != RS_RET_OK)
 		return;	/* if something went wrong, so let's leave */
-	
+
 	while(pCurr != NULL) {
 		pPrev = pCurr;
 		pCurr = pCurr->pNext;
@@ -799,7 +800,7 @@ PrintAllowedSenders(int iListToPrint)
 #define iListToPrint_MAX 2
 #endif
 	assert((iListToPrint > 0) && (iListToPrint <= iListToPrint_MAX));
-	
+
 	dbgprintf("Allowed %s Senders:\n", SENDER_TEXT[iListToPrint]);
 
 	pSender = (iListToPrint == 1) ? pAllowedSenders_UDP :
@@ -1006,13 +1007,13 @@ static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *
 	int ret;
 
 	assert(pFrom != NULL);
-	
+
 	if(setAllowRoot(&pAllowRoot, pszType) != RS_RET_OK)
 		return 0;	/* if something went wrong, we deny access - that's the better choice... */
 
 	if(pAllowRoot == NULL)
 		return 1; /* checking disabled, everything is valid! */
-	
+
 	/* now we loop through the list of allowed senders. As soon as
 	 * we find a match, we return back (indicating allowed). We loop
 	 * until we are out of allowed senders. If so, we fall through the
@@ -1475,7 +1476,7 @@ create_udp_socket(uchar *hostname,
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 	else
 		hints.ai_flags = AI_NUMERICSERV;
-	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_family = glbl.GetDefPFFamily(runConf);
 	hints.ai_socktype = SOCK_DGRAM;
 #	if defined (_AIX)
 	/* AIXPORT : SOCK_DGRAM has the protocol IPPROTO_UDP
