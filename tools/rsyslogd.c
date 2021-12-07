@@ -1059,20 +1059,20 @@ submitMsg2(smsg_t *pMsg)
 				getRawMsgLen(pMsg), glblGetMaxLine(), rawmsg);
 		}
 		writeOversizeMessageLog(pMsg);
-		if(glblGetOversizeMsgInputMode() == glblOversizeMsgInputMode_Split) {
+		if(glblGetOversizeMsgInputMode(runConf) == glblOversizeMsgInputMode_Split) {
 			splitOversizeMessage(pMsg);
 			/* we have submitted the message segments recursively, so we
 			 * can just deleted the original msg object and terminate.
 			 */
 			msgDestruct(&pMsg);
 			FINALIZE;
-		} else if(glblGetOversizeMsgInputMode() == glblOversizeMsgInputMode_Truncate) {
+		} else if(glblGetOversizeMsgInputMode(runConf) == glblOversizeMsgInputMode_Truncate) {
 			MsgTruncateToMaxSize(pMsg);
 		} else {
 			/* in "accept" mode, we do nothing, simply because "accept" means
 			 * to use as-is.
 			 */
-			assert(glblGetOversizeMsgInputMode() == glblOversizeMsgInputMode_Accept);
+			assert(glblGetOversizeMsgInputMode(runConf) == glblOversizeMsgInputMode_Accept);
 		}
 	}
 

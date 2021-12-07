@@ -96,7 +96,6 @@ static uchar *stdlog_chanspec = NULL;
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
-static int oversizeMsgInputMode = 0;	/* Mode which oversize messages will be forwarded */
 static int reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
@@ -569,13 +568,13 @@ setOversizeMsgInputMode(const uchar *const mode)
 {
 	DEFiRet;
 	if(!strcmp((char*)mode, "truncate")) {
-		oversizeMsgInputMode = glblOversizeMsgInputMode_Truncate;
+		loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Truncate;
 	} else if(!strcmp((char*)mode, "split")) {
-		oversizeMsgInputMode = glblOversizeMsgInputMode_Split;
+		loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Split;
 	} else if(!strcmp((char*)mode, "accept")) {
-		oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
+		loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
 	} else {
-		oversizeMsgInputMode = glblOversizeMsgInputMode_Truncate;
+		loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Truncate;
 	}
 	RETiRet;
 }
@@ -732,9 +731,10 @@ glblGetOperatingStateFile(rsconf_t *cnf)
 /* return the mode with which oversize messages will be put forward
  */
 int
-glblGetOversizeMsgInputMode(void)
+glblGetOversizeMsgInputMode(rsconf_t *cnf)
 {
-	return oversizeMsgInputMode;
+	assert(cnf != NULL);
+	return cnf->globals.oversizeMsgInputMode;
 }
 
 int
@@ -1035,7 +1035,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	LocalHostNameOverride = NULL;
 	free(loadConf->globals.oversizeMsgErrorFile);
 	loadConf->globals.oversizeMsgErrorFile = NULL;
-	oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
+	loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
 	reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 	free(loadConf->globals.pszWorkDir);
 	loadConf->globals.pszWorkDir = NULL;
