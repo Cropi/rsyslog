@@ -188,6 +188,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.iDefPFFamily = PF_UNSPEC;
 	pThis->globals.pACLAddHostnameOnFail = 0;
 	pThis->globals.pACLDontResolve = 0;
+	pThis->globals.bDisableDNS = 0;
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;

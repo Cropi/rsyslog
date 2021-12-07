@@ -93,7 +93,6 @@ static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup pa
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
-static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalIPIF = NULL;/* IP address to report for the local host (default is 127.0.0.1) */
 static int propLocalIPIF_set = 0;	/* is propLocalIPIF already set? */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
@@ -288,6 +287,7 @@ static dataType Get##nameFunc(rsconf_t *cnf) \
 
 SIMP_PROP2(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP2(DefPFFamily, iDefPFFamily, int)
+SIMP_PROP2(DisableDNS, bDisableDNS, int)
 /* We omit the setter on purpose as we want to customize it */
 SIMP_PROP_GET2(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
 SIMP_PROP_GET2(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
@@ -585,19 +585,6 @@ setReportChildProcessExits(const uchar *const mode)
 		iRet = RS_RET_CONF_PARAM_INVLD;
 	}
 	RETiRet;
-}
-
-static rsRetVal
-setDisableDNS(int val)
-{
-	bDisableDNS = val;
-	return RS_RET_OK;
-}
-
-static int
-getDisableDNS(void)
-{
-	return bDisableDNS;
 }
 
 static rsRetVal
@@ -950,8 +937,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
 	pIf->GetSourceIPofLocalClient = GetSourceIPofLocalClient;	/* [ar] */
 	pIf->SetSourceIPofLocalClient = SetSourceIPofLocalClient;	/* [ar] */
-	pIf->SetDisableDNS = setDisableDNS;
-	pIf->GetDisableDNS = getDisableDNS;
+	pIf->GetDisableDNS = GetDisableDNS;
 	pIf->GetMaxLine = glblGetMaxLine;
 	pIf->SetOption_DisallowWarning = setOption_DisallowWarning;
 	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
@@ -1493,7 +1479,7 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "net.aclresolvehostname")) {
 			loadConf->globals.pACLDontResolve = !((int) cnfparamvals[i].val.d.n);
 		} else if(!strcmp(paramblk.descr[i].name, "net.enabledns")) {
-			setDisableDNS(!((int) cnfparamvals[i].val.d.n));
+			SetDisableDNS(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "net.permitwarning")) {
 			setOption_DisallowWarning(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {

@@ -665,7 +665,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 		iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 	} else {
 		/* we need to process a hostname ACL */
-		if(glbl.GetDisableDNS()) {
+		if(glbl.GetDisableDNS(loadConf)) {
 			LogError(0, NO_ERRCODE, "Ignoring hostname based ACLs because DNS is disabled.");
 			ABORT_FINALIZE(RS_RET_OK);
 		}
@@ -1183,7 +1183,7 @@ getLocalHostname(uchar **ppName)
 
 	char *dot = strstr(hnbuf, ".");
 	struct addrinfo *res = NULL;
-	if(!empty_hostname && dot == NULL && !glbl.GetDisableDNS()) {
+	if(!empty_hostname && dot == NULL && runConf != NULL && !glbl.GetDisableDNS(runConf)) {
 		/* we need to (try) to find the real name via resolver */
 		struct addrinfo flags;
 		memset(&flags, 0, sizeof(flags));

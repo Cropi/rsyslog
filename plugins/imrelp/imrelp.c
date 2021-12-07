@@ -385,7 +385,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));
 		CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 		CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
-		if (!glbl.GetDisableDNS()) {
+		if (!glbl.GetDisableDNS(runModConf->pConf)) {
 			CHKiRet(relpEngineSetDnsLookupMode(pRelpEngine, 1));
 		}
 		#if defined(HAVE_RELPENGINESETTLSLIBBYNAME)

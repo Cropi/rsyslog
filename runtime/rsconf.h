@@ -101,6 +101,7 @@ struct globals_s {
 	int iDefPFFamily; /* protocol family (IPv4, IPv6 or both) */
 	int pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 	int pACLDontResolve; /* add hostname to acl instead of resolving it to IP(s) */
+	int bDisableDNS; /* don't look up IP addresses of remote messages */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

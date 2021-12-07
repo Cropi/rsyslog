@@ -762,7 +762,7 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool b
 			ABORT_FINALIZE(RS_RET_INVALID_HNAME);
 		}
 
-		if (!glbl.GetDisableDNS()) {
+		if (!glbl.GetDisableDNS(runConf)) {
 			error = getnameinfo(pAddr, SALEN(pAddr), (char *) szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 			if (error == 0) {
 				memset(&hints, 0, sizeof(struct addrinfo));

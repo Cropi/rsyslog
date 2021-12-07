@@ -268,7 +268,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 		ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
 	}
 
-	if(!glbl.GetDisableDNS()) {
+	if(!glbl.GetDisableDNS(runConf)) {
 		sigemptyset(&nmask);
 		sigaddset(&nmask, SIGHUP);
 		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
@@ -336,7 +336,7 @@ finalize_it:
 
 	prop.CreateStringProp(&etry->ip, (uchar*)szIP, strlen(szIP));
 
-	if(error || glbl.GetDisableDNS()) {
+	if(error || glbl.GetDisableDNS(runConf)) {
 		dbgprintf("Host name for your address (%s) unknown\n", szIP);
 		prop.AddRef(etry->ip);
 		etry->fqdn = etry->ip;
