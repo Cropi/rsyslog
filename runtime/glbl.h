@@ -122,8 +122,6 @@ ENDinterface(glbl)
 /* the remaining prototypes */
 PROTOTYPEObj(glbl);
 
-extern int glblReportNewSenders;
-extern int glblReportGoneAwaySenders;
 extern int glblSenderStatsTimeout;
 extern int glblSenderKeepTrack;
 extern int glblUnloadModules;

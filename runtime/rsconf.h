@@ -93,6 +93,8 @@ struct globals_s {
 	int bActionReportSuspension;
 	int bActionReportSuspensionCont;
 	short janitorInterval; /* interval (in minutes) at which the janitor runs */
+	int glblReportNewSenders;
+	int glblReportGoneAwaySenders;
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
