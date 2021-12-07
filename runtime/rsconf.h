@@ -97,6 +97,7 @@ struct globals_s {
 	int glblReportGoneAwaySenders;
 	int glblSenderStatsTimeout; /* 12 hr timeout for senders */
 	int glblSenderKeepTrack; /* keep track of known senders? */
+	int glblInputTimeoutShutdown; /* input shutdown timeout in ms */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

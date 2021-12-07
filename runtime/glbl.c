@@ -123,7 +123,6 @@ char** glblDbgFiles = NULL;
 size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
-int glblInputTimeoutShutdown = 1000; /* input shutdown timeout in ms */
 int glblShutdownQueueDoubleSize = 0;
 
 uint64_t glblDevOptions = 0; /* to be used by developers only */
@@ -1491,7 +1490,7 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "senders.keeptrack")) {
 			loadConf->globals.glblSenderKeepTrack = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "inputs.timeout.shutdown")) {
-			glblInputTimeoutShutdown = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.glblInputTimeoutShutdown = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.keepsupplemental")) {
 			loadConf->globals.gidDropPrivKeepSupplemental = (int) cnfparamvals[i].val.d.n; // OK ALL
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.id")) {

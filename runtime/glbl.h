@@ -129,7 +129,6 @@ extern char** glblDbgFiles;
 extern size_t glblDbgFilesNum;
 extern int glblDbgWhitelist;
 extern int glblPermitCtlC;
-extern int glblInputTimeoutShutdown;
 extern int glblIntMsgsSeverityFilter;
 extern int bTerminateInputs;
 extern int glblShutdownQueueDoubleSize;
