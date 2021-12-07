@@ -1843,7 +1843,7 @@ wait_timeout(const sigset_t *sigmask)
 {
 	struct timespec tvSelectTimeout;
 
-	tvSelectTimeout.tv_sec = janitorInterval * 60; /* interval is in minutes! */
+	tvSelectTimeout.tv_sec = runConf->globals.janitorInterval * 60; /* interval is in minutes! */
 	tvSelectTimeout.tv_nsec = 0;
 
 #ifdef _AIX
@@ -1857,7 +1857,7 @@ wait_timeout(const sigset_t *sigmask)
 		 * in useful subsecond steps.
 		 */
 		const long wait_period = 500000000; /* wait period in nanoseconds */
-		int timeout = janitorInterval * 60 * (1000000000 / wait_period);
+		int timeout = runConf->globals.janitorInterval * 60 * (1000000000 / wait_period);
 
 		tvSelectTimeout.tv_sec = 0;
 		tvSelectTimeout.tv_nsec = wait_period;

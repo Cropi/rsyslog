@@ -115,7 +115,6 @@ static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - 
 static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
 static int bEscapeTab = 1; /* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
 static int bParserEscapeCCCStyle = 0; /* escape control characters in c style: 0 - no, 1 - yes */
-short janitorInterval = 10; /* interval (in minutes) at which the janitor runs */
 int glblReportNewSenders = 0;
 int glblReportGoneAwaySenders = 0;
 int glblSenderStatsTimeout = 12 * 60 * 60; /* 12 hr timeout for senders */
@@ -1473,7 +1472,7 @@ glblDoneLoadCnf(void)
 			}
 			LogError(0, RS_RET_OK, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
 		} else if(!strcmp(paramblk.descr[i].name, "janitor.interval")) {
-			janitorInterval = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.janitorInterval = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.ipprotocol")) {
 			char *proto = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			if(!strcmp(proto, "unspecified")) {

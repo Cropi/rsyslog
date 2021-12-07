@@ -70,6 +70,7 @@
 #include "cryprov.h"
 #include "parserif.h"
 #include "janitor.h"
+#include "rsconf.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -648,7 +649,7 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 
 	if(pData->useSigprov)
 		sigprovPrepare(pData, szNameBuf);
-	
+
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pData->pStrm != NULL) {
@@ -947,7 +948,7 @@ janitorChkDynaFiles(instanceData *__restrict__ const pData)
 			if(pData->iCurrElt == i)
 				pData->iCurrElt = -1; /* no longer available! */
 		} else {
-			pCache[i]->nInactive += janitorInterval;
+			pCache[i]->nInactive += runModConf->pConf->globals.janitorInterval;
 		}
 	}
 }
@@ -968,7 +969,7 @@ janitorCB(void *pUsr)
 				STATSCOUNTER_INC(pData->ctrCloseTimeouts, pData->mutCtrCloseTimeouts);
 				closeFile(pData);
 			} else {
-				pData->nInactive += janitorInterval;
+				pData->nInactive += runModConf->pConf->globals.janitorInterval;
 			}
 		}
 	}

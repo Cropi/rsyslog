@@ -178,6 +178,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 	pThis->globals.bActionReportSuspension = 1;
 	pThis->globals.bActionReportSuspensionCont = 0;
+	pThis->globals.janitorInterval = 10;
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
