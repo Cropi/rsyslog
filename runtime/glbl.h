@@ -145,7 +145,6 @@ extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
  */
 #define DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR 1
 #define DEV_OPTION_8_1905_HANG_TEST 2 // TODO: remove - temporary for bughunt
-extern uint64_t glblDevOptions;
 
 #define glblGetOurPid() glbl_ourpid
 #define glblSetOurPid(pid) { glbl_ourpid = (pid); }

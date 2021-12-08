@@ -190,6 +190,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.pACLDontResolve = 0;
 	pThis->globals.bDisableDNS = 0;
 	pThis->globals.bProcessInternalMessages = 0;
+	pThis->globals.glblDevOptions = 0;
 
 	/* handle environment variables */
 	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");

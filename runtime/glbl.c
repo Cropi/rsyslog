@@ -119,8 +119,6 @@ int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
 int glblShutdownQueueDoubleSize = 0;
 
-uint64_t glblDevOptions = 0; /* to be used by developers only */
-
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
 DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
@@ -1204,7 +1202,7 @@ glblProcessCnf(struct cnfobj *o)
 			loadConf->globals.bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
 			cnfparamvals[i].bUsed = TRUE;
 		} else if(!strcmp(paramblk.descr[i].name, "internal.developeronly.options")) {
-			glblDevOptions = (uint64_t) cnfparamvals[i].val.d.n;
+			loadConf->globals.glblDevOptions = (uint64_t) cnfparamvals[i].val.d.n;
 			cnfparamvals[i].bUsed = TRUE;
 		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
 #ifndef ENABLE_LIBLOGGING_STDLOG

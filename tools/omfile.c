@@ -700,7 +700,7 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 	 * we do not know if we will otherwise come back to this file to flush it
 	 * at end of TX. see https://github.com/rsyslog/rsyslog/issues/2502
 	 */
-	if(((glblDevOptions & DEV_OPTION_8_1905_HANG_TEST) == 0) &&
+	if(((runModConf->pConf->globals.glblDevOptions & DEV_OPTION_8_1905_HANG_TEST) == 0) &&
 	    pData->bFlushOnTXEnd && pData->pStrm != NULL) {
 		CHKiRet(strm.Flush(pData->pStrm));
 	}

@@ -103,6 +103,7 @@ struct globals_s {
 	int pACLDontResolve; /* add hostname to acl instead of resolving it to IP(s) */
 	int bDisableDNS; /* don't look up IP addresses of remote messages */
 	int bProcessInternalMessages;/* Should rsyslog itself process internal messages? */
+	uint64_t glblDevOptions; /* to be used by developers only */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
