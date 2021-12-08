@@ -78,10 +78,7 @@ stdlog_channel_t stdlog_hdl = NULL;	/* handle to be used for stdlog */
 #endif
 
 static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
-#ifndef DFLT_INT_MSGS_SEV_FILTER
-	#define DFLT_INT_MSGS_SEV_FILTER 6	/* Warning level and more important */
-#endif
-int glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;/* filter for logging internal messages by syslog sev. */
+
 #ifdef ENABLE_LIBLOGGING_STDLOG
 static uchar *stdlog_chanspec = NULL;
 #endif
@@ -111,8 +108,6 @@ static int bEscapeTab = 1; /* escape tab control character when doing CC escapes
 static int bParserEscapeCCCStyle = 0; /* escape control characters in c style: 0 - no, 1 - yes */
 int glblUnloadModules = 1;
 int bPermitSlashInProgramname = 0;
-int glblIntMsgRateLimitItv = 5;
-int glblIntMsgRateLimitBurst = 500;
 char** glblDbgFiles = NULL;
 size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
@@ -1479,14 +1474,14 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {
 			loadConf->globals.bAbortOnUncleanConfig = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.burst")) {
-			glblIntMsgRateLimitBurst = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.glblIntMsgRateLimitBurst = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.interval")) {
-			glblIntMsgRateLimitItv = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.glblIntMsgRateLimitItv = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.severity")) {
-			glblIntMsgsSeverityFilter = (int) cnfparamvals[i].val.d.n;
-			if((glblIntMsgsSeverityFilter < 0) || (glblIntMsgsSeverityFilter > 7)) {
+			loadConf->globals.glblIntMsgsSeverityFilter = (int) cnfparamvals[i].val.d.n;
+			if((loadConf->globals.glblIntMsgsSeverityFilter < 0) || (loadConf->globals.glblIntMsgsSeverityFilter > 7)) {
 				parser_errmsg("invalid internalmsg.severity value");
-				glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
+				loadConf->globals.glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
 			}
 		} else if(!strcmp(paramblk.descr[i].name, "environment")) {
 			for(int j = 0 ; j <  cnfparamvals[i].val.d.ar->nmemb ; ++j) {

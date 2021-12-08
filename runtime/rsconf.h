@@ -104,6 +104,9 @@ struct globals_s {
 	int bDisableDNS; /* don't look up IP addresses of remote messages */
 	int bProcessInternalMessages;/* Should rsyslog itself process internal messages? */
 	uint64_t glblDevOptions; /* to be used by developers only */
+	int glblIntMsgRateLimitItv;
+	int glblIntMsgRateLimitBurst;
+	int glblIntMsgsSeverityFilter;/* filter for logging internal messages by syslog sev. */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

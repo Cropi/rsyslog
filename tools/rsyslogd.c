@@ -559,7 +559,7 @@ rsyslogd_InitStdRatelimiters(void)
 	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
 	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
 	ratelimitSetThreadSafe(internalMsg_ratelimiter);
-	ratelimitSetLinuxLike(internalMsg_ratelimiter, glblIntMsgRateLimitItv, glblIntMsgRateLimitBurst);
+	ratelimitSetLinuxLike(internalMsg_ratelimiter, loadConf->globals.glblIntMsgRateLimitItv, loadConf->globals.glblIntMsgRateLimitBurst);
 	/* TODO: make internalMsg ratelimit settings configurable */
 finalize_it:
 	RETiRet;
@@ -851,7 +851,7 @@ static void
 logmsgInternal_doWrite(smsg_t *pMsg)
 {
 	const int pri = getPRIi(pMsg);
-	if(pri % 8 <= glblIntMsgsSeverityFilter) {
+	if(pri % 8 <= runConf->globals.glblIntMsgsSeverityFilter) {
 		if(runConf->globals.bProcessInternalMessages) {
 			submitMsg2(pMsg);
 			pMsg = NULL; /* msg obj handed over; do not destruct */

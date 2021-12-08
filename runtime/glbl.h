@@ -46,6 +46,10 @@
 #define REPORT_CHILD_PROCESS_EXITS_ERRORS 1
 #define REPORT_CHILD_PROCESS_EXITS_ALL 2
 
+#ifndef DFLT_INT_MSGS_SEV_FILTER
+	#define DFLT_INT_MSGS_SEV_FILTER 6	/* Warning level and more important */
+#endif
+
 extern pid_t glbl_ourpid;
 extern int bPermitSlashInProgramname;
 #ifdef ENABLE_LIBLOGGING_STDLOG
@@ -123,13 +127,10 @@ ENDinterface(glbl)
 PROTOTYPEObj(glbl);
 
 extern int glblUnloadModules;
-extern int glblIntMsgRateLimitItv;
-extern int glblIntMsgRateLimitBurst;
 extern char** glblDbgFiles;
 extern size_t glblDbgFilesNum;
 extern int glblDbgWhitelist;
 extern int glblPermitCtlC;
-extern int glblIntMsgsSeverityFilter;
 extern int bTerminateInputs;
 extern int glblShutdownQueueDoubleSize;
 #ifndef HAVE_ATOMIC_BUILTINS

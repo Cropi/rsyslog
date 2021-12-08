@@ -191,6 +191,9 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.bDisableDNS = 0;
 	pThis->globals.bProcessInternalMessages = 0;
 	pThis->globals.glblDevOptions = 0;
+	pThis->globals.glblIntMsgRateLimitItv = 5;
+	pThis->globals.glblIntMsgRateLimitBurst = 500;
+	pThis->globals.glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
 
 	/* handle environment variables */
 	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
