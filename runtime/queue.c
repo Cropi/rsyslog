@@ -2809,7 +2809,7 @@ DoSaveOnShutdown(qqueue_t *pThis)
 BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(qqueue)
 	DBGOPRINT((obj_t*) pThis, "shutdown: begin to destruct queue\n");
-	if(glblShutdownQueueDoubleSize) {
+	if(ourConf->globals.glblShutdownQueueDoubleSize) {
 		pThis->iHighWtrMrk *= 2;
 		pThis->iMaxQueueSize *= 2;
 	}

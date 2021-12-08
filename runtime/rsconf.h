@@ -132,6 +132,7 @@ struct globals_s {
 	unsigned dnscacheDefaultTTL; /* 24 hrs default TTL */
 	int dnscacheEnableTTL; /* expire entries or not (0) ? */
 	int bSupportCompressionExtension;
+	int glblShutdownQueueDoubleSize;
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

@@ -131,7 +131,6 @@ extern size_t glblDbgFilesNum;
 extern int glblDbgWhitelist;
 extern int glblPermitCtlC;
 extern int bTerminateInputs;
-extern int glblShutdownQueueDoubleSize;
 #ifndef HAVE_ATOMIC_BUILTINS
 extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 #endif

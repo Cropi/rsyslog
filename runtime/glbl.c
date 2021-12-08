@@ -103,7 +103,6 @@ char** glblDbgFiles = NULL;
 size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
-int glblShutdownQueueDoubleSize = 0;
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -1527,7 +1526,7 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "debug.whitelist")) {
 			glblDbgWhitelist = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "shutdown.queue.doublesize")) {
-			glblShutdownQueueDoubleSize = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.glblShutdownQueueDoubleSize = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
 			loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "shutdown.enable.ctlc")) {

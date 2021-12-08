@@ -207,6 +207,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.dnscacheDefaultTTL = 24 * 60 * 60;
 	pThis->globals.dnscacheEnableTTL = 0;
 	pThis->globals.bSupportCompressionExtension = 1;
+	pThis->globals.glblShutdownQueueDoubleSize = 0;
 
 	/* parser params*/
 	pThis->globals.parser.cCCEscapeChar = '#';
