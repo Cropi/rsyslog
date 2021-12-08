@@ -1613,7 +1613,7 @@ initAll(int argc, char **argv)
 
 	hdlr_enable(SIGPIPE, SIG_IGN);
 	hdlr_enable(SIGXFSZ, SIG_IGN);
-	if(Debug || glblPermitCtlC) {
+	if(Debug || loadConf->globals.glblPermitCtlC) {
 		hdlr_enable(SIGUSR1, rsyslogdDebugSwitch);
 		hdlr_enable(SIGINT,  rsyslogdDoDie);
 		hdlr_enable(SIGQUIT, rsyslogdDoDie);

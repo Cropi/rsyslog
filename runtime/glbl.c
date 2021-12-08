@@ -1506,7 +1506,9 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
 			loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "shutdown.enable.ctlc")) {
-			glblPermitCtlC = (int) cnfparamvals[i].val.d.n;
+			/* glblPermitCtlC is obtained from before loadConf is created */
+			loadConf->globals.glblPermitCtlC =
+				(glblPermitCtlC == 1) ? glblPermitCtlC : (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutshutdown")) {
 			actq_dflt_toQShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutactioncompletion")) {

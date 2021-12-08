@@ -107,6 +107,7 @@ struct globals_s {
 	int glblIntMsgRateLimitItv;
 	int glblIntMsgRateLimitBurst;
 	int glblIntMsgsSeverityFilter;/* filter for logging internal messages by syslog sev. */
+	int glblPermitCtlC;
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
