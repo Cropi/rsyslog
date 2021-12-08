@@ -82,7 +82,6 @@ static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later 
 #ifdef ENABLE_LIBLOGGING_STDLOG
 static uchar *stdlog_chanspec = NULL;
 #endif
-static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
@@ -99,15 +98,7 @@ static char **StripDomains = NULL;
 static char **LocalHosts = NULL;
 /* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
-static uchar cCCEscapeChar = '#'; /* character to be used to start an escape sequence for control chars */
-static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
-static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
-static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
-static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
-static int bEscapeTab = 1; /* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
-static int bParserEscapeCCCStyle = 0; /* escape control characters in c style: 0 - no, 1 - yes */
 int glblUnloadModules = 1;
-int bPermitSlashInProgramname = 0;
 char** glblDbgFiles = NULL;
 size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
@@ -277,22 +268,24 @@ static dataType Get##nameFunc(rsconf_t *cnf) \
 SIMP_PROP2(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP2(DefPFFamily, iDefPFFamily, int)
 SIMP_PROP2(DisableDNS, bDisableDNS, int)
+SIMP_PROP2(ParserEscapeControlCharactersCStyle, parser.bParserEscapeCCCStyle, int)
+SIMP_PROP2(ParseHOSTNAMEandTAG, parser.bParseHOSTNAMEandTAG, int)
+
 /* We omit the setter on purpose as we want to customize it */
 SIMP_PROP_GET2(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
 SIMP_PROP_GET2(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
 SIMP_PROP_GET2(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*)
+SIMP_PROP_GET2(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
+SIMP_PROP_GET2(ParserDropTrailingLFOnReception, parser.bDropTrailingLF, int)
+SIMP_PROP_GET2(ParserEscapeControlCharactersOnReceive, parser.bEscapeCCOnRcv, int)
+SIMP_PROP_GET2(ParserSpaceLFOnReceive, parser.bSpaceLFOnRcv, int)
+SIMP_PROP_GET2(ParserEscape8BitCharactersOnReceive, parser.bEscape8BitChars, int)
+SIMP_PROP_GET2(ParserEscapeControlCharacterTab, parser.bEscapeTab, int)
 
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
-SIMP_PROP(ParserControlCharacterEscapePrefix, cCCEscapeChar, uchar)
-SIMP_PROP(ParserDropTrailingLFOnReception, bDropTrailingLF, int)
-SIMP_PROP(ParserEscapeControlCharactersOnReceive, bEscapeCCOnRcv, int)
-SIMP_PROP(ParserSpaceLFOnReceive, bSpaceLFOnRcv, int)
-SIMP_PROP(ParserEscape8BitCharactersOnReceive, bEscape8BitChars, int)
-SIMP_PROP(ParserEscapeControlCharacterTab, bEscapeTab, int)
-SIMP_PROP(ParserEscapeControlCharactersCStyle, bParserEscapeCCCStyle, int)
 #ifdef USE_UNLIMITED_SELECT
 SIMP_PROP(FdSetSize, iFdSetSize, int)
 #endif
@@ -495,6 +488,48 @@ setDfltNetstrmDrvr(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	RETiRet;
 }
 
+static rsRetVal
+setParserControlCharacterEscapePrefix(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.cCCEscapeChar = *pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserDropTrailingLFOnReception(void __attribute__((unused)) *pVal, int pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.bDropTrailingLF = pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserEscapeControlCharactersOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.bEscapeCCOnRcv = pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserSpaceLFOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.bSpaceLFOnRcv = pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserEscape8BitCharactersOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.bEscape8BitChars = pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserEscapeControlCharacterTab(void __attribute__((unused)) *pVal, int pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.bEscapeTab = pNewVal;
+	RETiRet;
+}
+
 /* This function is used both by legacy and RainerScript conf. It is a real setter. */
 static void
 setMaxLine(const int64_t iNew)
@@ -587,19 +622,6 @@ static int
 getOption_DisallowWarning(void)
 {
 	return option_DisallowWarning;
-}
-
-static rsRetVal
-setParseHOSTNAMEandTAG(int val)
-{
-	bParseHOSTNAMEandTAG = val;
-	return RS_RET_OK;
-}
-
-static int
-getParseHOSTNAMEandTAG(void)
-{
-	return bParseHOSTNAMEandTAG;
 }
 
 /* return our local IP.
@@ -930,21 +952,22 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetMaxLine = glblGetMaxLine;
 	pIf->SetOption_DisallowWarning = setOption_DisallowWarning;
 	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
-	pIf->SetParseHOSTNAMEandTAG = setParseHOSTNAMEandTAG;
-	pIf->GetParseHOSTNAMEandTAG = getParseHOSTNAMEandTAG;
 	pIf->GetDfltNetstrmDrvrCAF = GetDfltNetstrmDrvrCAF;
 	pIf->GetDfltNetstrmDrvrCertFile = GetDfltNetstrmDrvrCertFile;
 	pIf->GetDfltNetstrmDrvrKeyFile = GetDfltNetstrmDrvrKeyFile;
 	pIf->GetDfltNetstrmDrvr = GetDfltNetstrmDrvr;
-#define SIMP_PROP2(name) \
-	pIf->Get##name = Get##name; \
-	pIf->Set##name = Set##name;
-	SIMP_PROP2(DropMalPTRMsgs)
-	SIMP_PROP2(DefPFFamily)
+	pIf->GetParserControlCharacterEscapePrefix = GetParserControlCharacterEscapePrefix;
+	pIf->GetParserDropTrailingLFOnReception = GetParserDropTrailingLFOnReception;
+	pIf->GetParserEscapeControlCharactersOnReceive = GetParserEscapeControlCharactersOnReceive;
+	pIf->GetParserSpaceLFOnReceive = GetParserSpaceLFOnReceive;
+	pIf->GetParserEscape8BitCharactersOnReceive = GetParserEscape8BitCharactersOnReceive;
+	pIf->GetParserEscapeControlCharacterTab = GetParserEscapeControlCharacterTab;
 
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
+	SIMP_PROP(DropMalPTRMsgs)
+	SIMP_PROP(DefPFFamily)
 	SIMP_PROP(PreserveFQDN);
 	SIMP_PROP(mainqCnfObj);
 	SIMP_PROP(LocalFQDNName)
@@ -952,13 +975,8 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(LocalDomain)
 	SIMP_PROP(StripDomains)
 	SIMP_PROP(LocalHosts)
-	SIMP_PROP(ParserControlCharacterEscapePrefix)
-	SIMP_PROP(ParserDropTrailingLFOnReception)
-	SIMP_PROP(ParserEscapeControlCharactersOnReceive)
-	SIMP_PROP(ParserSpaceLFOnReceive)
-	SIMP_PROP(ParserEscape8BitCharactersOnReceive)
-	SIMP_PROP(ParserEscapeControlCharacterTab)
 	SIMP_PROP(ParserEscapeControlCharactersCStyle)
+	SIMP_PROP(ParseHOSTNAMEandTAG)
 #ifdef USE_UNLIMITED_SELECT
 	SIMP_PROP(FdSetSize)
 #endif
@@ -993,14 +1011,14 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	loadConf->globals.bDropMalPTRMsgs = 0;
 	bPreserveFQDN = 0;
 	iMaxLine = 8192;
-	cCCEscapeChar = '#';
-	bDropTrailingLF = 1;
+	loadConf->globals.parser.cCCEscapeChar = '#';
+	loadConf->globals.parser.bDropTrailingLF = 1;
 	loadConf->globals.reportOversizeMsg = 1;
-	bEscapeCCOnRcv = 1; /* default is to escape control characters */
-	bSpaceLFOnRcv = 0;
-	bEscape8BitChars = 0; /* default is not to escape control characters */
-	bEscapeTab = 1; /* default is to escape tab characters */
-	bParserEscapeCCCStyle = 0;
+	loadConf->globals.parser.bEscapeCCOnRcv = 1; /* default is to escape control characters */
+	loadConf->globals.parser.bSpaceLFOnRcv = 0;
+	loadConf->globals.parser.bEscape8BitChars = 0; /* default is not to escape control characters */
+	loadConf->globals.parser.bEscapeTab = 1; /* default is to escape tab characters */
+	loadConf->globals.parser.bParserEscapeCCCStyle = 0;
 #ifdef USE_UNLIMITED_SELECT
 	iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask);
 #endif
@@ -1394,24 +1412,31 @@ glblDoneLoadCnf(void)
 			glblUnloadModules = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
 			uchar* tmp = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			cCCEscapeChar = tmp[0];
+			setParserControlCharacterEscapePrefix(NULL, tmp);
 			free(tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
-			bDropTrailingLF = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			setParserDropTrailingLFOnReception(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactersonreceive")) {
-			bEscapeCCOnRcv = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			setParserEscapeControlCharactersOnReceive(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.spacelfonreceive")) {
-			bSpaceLFOnRcv = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			setParserSpaceLFOnReceive(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escape8bitcharactersonreceive")) {
-			bEscape8BitChars = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			setParserEscape8BitCharactersOnReceive(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactertab")) {
-			bEscapeTab = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			setParserEscapeControlCharacterTab(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharacterscstyle")) {
-			bParserEscapeCCCStyle = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			SetParserEscapeControlCharactersCStyle(tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.parsehostnameandtag")) {
-			bParseHOSTNAMEandTAG = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			SetParseHOSTNAMEandTAG(tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.permitslashinprogramname")) {
-			bPermitSlashInProgramname = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.parser.bPermitSlashInProgramname = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
@@ -1530,7 +1555,7 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.enable")) {
 			loadConf->globals.dnscacheEnableTTL = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.supportcompressionextension")) {
-			bSupportCompressionExtension = cnfparamvals[i].val.d.n;
+			loadConf->globals.bSupportCompressionExtension = cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 				"param '%s'\n", paramblk.descr[i].name);
@@ -1574,16 +1599,18 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));
 
 	/* Deprecated parser config options */
-	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL,
-	&cCCEscapeChar, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL,
-	&bDropTrailingLF, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL,
-	&bEscapeCCOnRcv, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, NULL, &bSpaceLFOnRcv, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, NULL,
-	&bEscape8BitChars, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, setParserControlCharacterEscapePrefix,
+	NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, setParserDropTrailingLFOnReception,
+	NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, setParserEscapeControlCharactersOnReceive,
+	NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, setParserSpaceLFOnReceive,
+	NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, setParserEscape8BitCharactersOnReceive,
+	NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, setParserEscapeControlCharacterTab,
+	NULL, NULL));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 	resetConfigVariables, NULL, NULL));

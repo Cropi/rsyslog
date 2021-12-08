@@ -57,6 +57,19 @@ struct queuecnf_s {
 	int iMainMsgQueueDeqtWinToHr;	/* hour begin of time frame when queue is to be dequeued */
 };
 
+/* parser config parameters.*/
+struct parsercnf_s {
+	uchar cCCEscapeChar; /* character to be used to start an escape sequence for control chars */
+	int bDropTrailingLF; /* drop trailing LF's on reception? */
+	int bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
+	int bSpaceLFOnRcv; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
+	int bEscape8BitChars; /* escape characters > 127 on reception: 0 - no, 1 - yes */
+	int bEscapeTab; /* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
+	int bParserEscapeCCCStyle; /* escape control characters in c style: 0 - no, 1 - yes */
+	int bParseHOSTNAMEandTAG;	/* parser modification (based on startup params!) */
+	int bPermitSlashInProgramname;
+};
+
 /* globals are data items that are really global, and can be set only
  * once (at least in theory, because the legacy system permits them to
  * be re-set as often as the user likes).
@@ -118,12 +131,14 @@ struct globals_s {
 	int ruleset_dflt_toWrkShutdown;	/* timeout for worker thread shutdown */
 	unsigned dnscacheDefaultTTL; /* 24 hrs default TTL */
 	int dnscacheEnableTTL; /* expire entries or not (0) ? */
+	int bSupportCompressionExtension;
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 
 	//TODO: other representation for main queue? Or just load it differently?
 	queuecnf_t mainQ;	/* main queue parameters */
+	parsercnf_t parser; /* parser parameters*/
 };
 
 /* (global) defaults are global in the sense that they are accessible

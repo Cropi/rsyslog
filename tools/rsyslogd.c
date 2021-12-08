@@ -1508,7 +1508,7 @@ initAll(int argc, char **argv)
 					 "For the 0x01 bit, please use the "
 					 "global(parser.parseHostnameAndTag=\"off\") "
 					 "configuration parameter instead.\n");
-				glbl.SetParseHOSTNAMEandTAG(0);
+				// glbl.SetParseHOSTNAMEandTAG(0);
 			}
 			if(iHelperUOpt & 0x02) {
 				fprintf (stderr, "rsyslogd: the -u command line option will go away "

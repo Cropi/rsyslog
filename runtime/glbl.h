@@ -51,7 +51,6 @@
 #endif
 
 extern pid_t glbl_ourpid;
-extern int bPermitSlashInProgramname;
 #ifdef ENABLE_LIBLOGGING_STDLOG
 extern stdlog_channel_t stdlog_hdl;
 #endif
@@ -68,6 +67,14 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP2(DropMalPTRMsgs, int)
 	SIMP_PROP2(DefPFFamily, int)
 	SIMP_PROP2(DisableDNS, int)
+	SIMP_PROP2(ParserControlCharacterEscapePrefix, uchar)
+	SIMP_PROP2(ParserDropTrailingLFOnReception, int)
+	SIMP_PROP2(ParserEscapeControlCharactersOnReceive, int)
+	SIMP_PROP2(ParserSpaceLFOnReceive, int)
+	SIMP_PROP2(ParserEscape8BitCharactersOnReceive, int)
+	SIMP_PROP2(ParserEscapeControlCharacterTab, int)
+	SIMP_PROP2(ParserEscapeControlCharactersCStyle, int)
+	SIMP_PROP2(ParseHOSTNAMEandTAG, int)
 	uchar* (*GetDfltNetstrmDrvrCAF)(rsconf_t *cnf);
 	uchar* (*GetDfltNetstrmDrvrCertFile)(rsconf_t *cnf);
 	uchar* (*GetDfltNetstrmDrvrKeyFile)(rsconf_t *cnf);
@@ -86,13 +93,6 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(LocalDomain, uchar*)
 	SIMP_PROP(StripDomains, char**)
 	SIMP_PROP(LocalHosts, char**)
-	SIMP_PROP(ParserControlCharacterEscapePrefix, uchar)
-	SIMP_PROP(ParserDropTrailingLFOnReception, int)
-	SIMP_PROP(ParserEscapeControlCharactersOnReceive, int)
-	SIMP_PROP(ParserSpaceLFOnReceive, int)
-	SIMP_PROP(ParserEscape8BitCharactersOnReceive, int)
-	SIMP_PROP(ParserEscapeControlCharacterTab, int)
-	SIMP_PROP(ParserEscapeControlCharactersCStyle, int)
 	/* added v3, 2009-06-30 */
 	rsRetVal (*GenerateLocalHostNameProperty)(void);
 	prop_t* (*GetLocalHostNameProp)(void);
@@ -100,7 +100,6 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	int (*GetGlobalInputTermState)(void);
 	void (*SetGlobalInputTermination)(void);
 	/* added v5, 2009-11-03 */
-	SIMP_PROP(ParseHOSTNAMEandTAG, int)
 	/* note: v4, v5 are already used by more recent versions, so we need to skip them! */
 	/* added v6, 2009-11-16 as part of varmojfekoj's "unlimited select()" patch
 	 * Note that it must be always present, otherwise the interface would have different

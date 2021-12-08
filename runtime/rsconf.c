@@ -206,6 +206,18 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.ruleset_dflt_toWrkShutdown = 60000;
 	pThis->globals.dnscacheDefaultTTL = 24 * 60 * 60;
 	pThis->globals.dnscacheEnableTTL = 0;
+	pThis->globals.bSupportCompressionExtension = 1;
+
+	/* parser params*/
+	pThis->globals.parser.cCCEscapeChar = '#';
+	pThis->globals.parser.bDropTrailingLF = 1;
+	pThis->globals.parser.bEscapeCCOnRcv = 1;
+	pThis->globals.parser.bSpaceLFOnRcv = 0;
+	pThis->globals.parser.bEscape8BitChars = 0;
+	pThis->globals.parser.bEscapeTab = 1;
+	pThis->globals.parser.bParserEscapeCCCStyle = 0;
+	pThis->globals.parser.bParseHOSTNAMEandTAG = 1;
+	pThis->globals.parser.bPermitSlashInProgramname = 0;
 
 	/* handle environment variables */
 	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");

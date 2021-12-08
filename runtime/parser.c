@@ -68,8 +68,6 @@ parserList_t *pParsLstRoot = NULL;
  */
 parserList_t *pDfltParsLst = NULL;
 
-int bSupportCompressionExtension = 1;
-
 /* intialize (but NOT allocate) a parser list. Primarily meant as a hook
  * which can be used to extend the list in the future. So far, just sets
  * it to NULL.
@@ -152,7 +150,7 @@ FindParser(parser_t **ppParser, uchar *pName)
 {
 	parserList_t *pThis;
 	DEFiRet;
-	
+
 	for(pThis = pParsLstRoot ; pThis != NULL ; pThis = pThis->pNext) {
 		if(ustrcmp(pThis->pParser->pName, pName) == 0) {
 			*ppParser = pThis->pParser;
@@ -183,7 +181,7 @@ AddDfltParser(uchar *pName)
 	CHKiRet(FindParser(&pParser, pName));
 	CHKiRet(AddParserToList(&pDfltParsLst, pParser));
 	DBGPRINTF("Parser '%s' added to default parser set.\n", pName);
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -316,7 +314,7 @@ static rsRetVal uncompressMessage(smsg_t *pMsg)
 	uLongf iLenDefBuf;
 	uchar *pszMsg;
 	size_t lenMsg;
-	
+
 	assert(pMsg != NULL);
 	pszMsg = pMsg->pszRawMsg;
 	lenMsg = pMsg->iLenRawMsg;
@@ -324,7 +322,7 @@ static rsRetVal uncompressMessage(smsg_t *pMsg)
 	/* we first need to check if we have a compressed record. If so,
 	 * we must decompress it.
 	 */
-	if(lenMsg > 0 && *pszMsg == 'z' && bSupportCompressionExtension) { /* compressed data present? */
+	if(lenMsg > 0 && *pszMsg == 'z' && runConf->globals.bSupportCompressionExtension) { /* compressed data present? */
 		/* we have compressed data, so let's deflate it. We support a maximum
 		 * message size of iMaxLine. If it is larger, an error message is logged
 		 * and the message is dropped. We do NOT try to decompress larger messages
@@ -412,7 +410,7 @@ SanitizeMsg(smsg_t *pMsg)
 	 * compatible to recent IETF developments, we allow the user to
 	 * turn on/off this handling.  rgerhards, 2007-07-23
 	 */
-	if(glbl.GetParserDropTrailingLFOnReception()
+	if(glbl.GetParserDropTrailingLFOnReception(runConf)
 	   && lenMsg > 0 && pszMsg[lenMsg-1] == '\n') {
 		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
 		lenMsg--;
@@ -433,15 +431,15 @@ SanitizeMsg(smsg_t *pMsg)
 	int bNeedSanitize = 0;
 	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
 		if(pszMsg[iSrc] < 32) {
-			if(glbl.GetParserSpaceLFOnReceive() && pszMsg[iSrc] == '\n') {
+			if(glbl.GetParserSpaceLFOnReceive(runConf) && pszMsg[iSrc] == '\n') {
 				pszMsg[iSrc] = ' ';
-			} else if(pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive()) {
+			} else if(pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive(runConf)) {
 				bNeedSanitize = 1;
-				if (!glbl.GetParserSpaceLFOnReceive()) {
+				if (!glbl.GetParserSpaceLFOnReceive(runConf)) {
 					break;
 			    }
 			}
-		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
+		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive(runConf)) {
 			bNeedSanitize = 1;
 			break;
 		}
@@ -477,16 +475,16 @@ SanitizeMsg(smsg_t *pMsg)
 	}
 	iDst = iSrc;
 	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
-		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || glbl.GetParserEscapeControlCharacterTab())) {
+		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || glbl.GetParserEscapeControlCharacterTab(runConf))) {
 			/* note: \0 must always be escaped, the rest of the code currently
 			 * can not handle it! -- rgerhards, 2009-08-26
 			 */
-			if(pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive()) {
+			if(pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive(runConf)) {
 				/* we are configured to escape control characters. Please note
 				 * that this most probably break non-western character sets like
 				 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
 				 */
-				if (glbl.GetParserEscapeControlCharactersCStyle()) {
+				if (glbl.GetParserEscapeControlCharactersCStyle(runConf)) {
 					pDst[iDst++] = '\\';
 
 					switch (pszMsg[iSrc]) {
@@ -528,15 +526,15 @@ SanitizeMsg(smsg_t *pMsg)
 					}
 
 				} else {
-					pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix();
+					pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix(runConf);
 					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
 					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
 					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
 				}
 			}
 
-		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
-			if (glbl.GetParserEscapeControlCharactersCStyle()) {
+		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive(runConf)) {
+			if (glbl.GetParserEscapeControlCharactersCStyle(runConf)) {
 				pDst[iDst++] = '\\';
 				pDst[iDst++] = 'x';
 
@@ -548,7 +546,7 @@ SanitizeMsg(smsg_t *pMsg)
 				/* In this case, we also do the conversion. Note that this most
 				 * probably breaks European languages. -- rgerhards, 2010-01-27
 				 */
-				pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix();
+				pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix(runConf);
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
