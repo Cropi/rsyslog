@@ -195,6 +195,16 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.glblIntMsgRateLimitBurst = 500;
 	pThis->globals.glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
 
+	pThis->globals.actq_dflt_toQShutdown = 10;
+	pThis->globals.actq_dflt_toActShutdown = 1000;
+	pThis->globals.actq_dflt_toEnq = 2000;
+	pThis->globals.actq_dflt_toWrkShutdown = 60000;
+
+	pThis->globals.ruleset_dflt_toQShutdown = 1500;
+	pThis->globals.ruleset_dflt_toActShutdown = 1000;
+	pThis->globals.ruleset_dflt_toEnq = 2000;
+	pThis->globals.ruleset_dflt_toWrkShutdown = 60000;
+
 	/* handle environment variables */
 	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
 	if(log_dflt != NULL && !strcmp(log_dflt, "1"))

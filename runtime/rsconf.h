@@ -108,6 +108,14 @@ struct globals_s {
 	int glblIntMsgRateLimitBurst;
 	int glblIntMsgsSeverityFilter;/* filter for logging internal messages by syslog sev. */
 	int glblPermitCtlC;
+	int actq_dflt_toQShutdown; /* queue shutdown */
+	int actq_dflt_toActShutdown; /* action shutdown (in phase 2) */
+	int actq_dflt_toEnq; /* timeout for queue enque */
+	int actq_dflt_toWrkShutdown;	/* timeout for worker thread shutdown */
+	int ruleset_dflt_toQShutdown;	/* queue shutdown */
+	int ruleset_dflt_toActShutdown;	/* action shutdown (in phase 2) */
+	int ruleset_dflt_toEnq;		/* timeout for queue enque */
+	int ruleset_dflt_toWrkShutdown;	/* timeout for worker thread shutdown */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */

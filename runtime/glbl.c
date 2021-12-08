@@ -1510,21 +1510,21 @@ glblDoneLoadCnf(void)
 			loadConf->globals.glblPermitCtlC =
 				(glblPermitCtlC == 1) ? glblPermitCtlC : (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutshutdown")) {
-			actq_dflt_toQShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.actq_dflt_toQShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutactioncompletion")) {
-			actq_dflt_toActShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.actq_dflt_toActShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutenqueue")) {
-			actq_dflt_toEnq = cnfparamvals[i].val.d.n;
+			loadConf->globals.actq_dflt_toEnq = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutworkerthreadshutdown")) {
-			actq_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.actq_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutshutdown")) {
-			ruleset_dflt_toQShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.ruleset_dflt_toQShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutactioncompletion")) {
-			ruleset_dflt_toActShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.ruleset_dflt_toActShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutenqueue")) {
-			ruleset_dflt_toEnq = cnfparamvals[i].val.d.n;
+			loadConf->globals.ruleset_dflt_toEnq = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutworkerthreadshutdown")) {
-			ruleset_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.ruleset_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.default")) {
 			dnscacheDefaultTTL = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.enable")) {

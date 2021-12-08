@@ -85,18 +85,6 @@ unsigned int iOverallQueueSize = 0;
 
 #define OVERSIZE_QUEUE_WATERMARK 500000 /* when is a queue considered to be "overly large"? */
 
-/* overridable default values (via global config) */
-int actq_dflt_toQShutdown = 10;		/* queue shutdown */
-int actq_dflt_toActShutdown = 1000;	/* action shutdown (in phase 2) */
-int actq_dflt_toEnq = 2000;		/* timeout for queue enque */
-int actq_dflt_toWrkShutdown = 60000;	/* timeout for worker thread shutdown */
-
-int ruleset_dflt_toQShutdown = 1500;	/* queue shutdown */
-int ruleset_dflt_toActShutdown = 1000;	/* action shutdown (in phase 2) */
-int ruleset_dflt_toEnq = 2000;		/* timeout for queue enque */
-int ruleset_dflt_toWrkShutdown = 60000;	/* timeout for worker thread shutdown */
-
-
 /* forward-definitions */
 static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg);
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
@@ -1550,10 +1538,10 @@ qqueueSetDefaultsActionQueue(qqueue_t *pThis)
 	pThis->iMaxFileSize = 1024*1024;
 	pThis->iPersistUpdCnt = 0;		/* persist queue info every n updates */
 	pThis->bSyncQueueFiles = 0;
-	pThis->toQShutdown = actq_dflt_toQShutdown;	/* queue shutdown */
-	pThis->toActShutdown = actq_dflt_toActShutdown;	/* action shutdown (in phase 2) */
-	pThis->toEnq = actq_dflt_toEnq;			/* timeout for queue enque */
-	pThis->toWrkShutdown = actq_dflt_toWrkShutdown;	/* timeout for worker thread shutdown */
+	pThis->toQShutdown = loadConf->globals.actq_dflt_toQShutdown;	/* queue shutdown */
+	pThis->toActShutdown = loadConf->globals.actq_dflt_toActShutdown;	/* action shutdown (in phase 2) */
+	pThis->toEnq = loadConf->globals.actq_dflt_toEnq;			/* timeout for queue enque */
+	pThis->toWrkShutdown = loadConf->globals.actq_dflt_toWrkShutdown;	/* timeout for worker thread shutdown */
 	pThis->iMinMsgsPerWrkr = -1;		/* minimum messages per worker needed to start a new one */
 	pThis->bSaveOnShutdown = 1;		/* save queue on shutdown (when DA enabled)? */
 	pThis->sizeOnDiskMax = 0;		/* unlimited */
@@ -1583,10 +1571,10 @@ qqueueSetDefaultsRulesetQueue(qqueue_t *pThis)
 	pThis->iMaxFileSize = 16*1024*1024;
 	pThis->iPersistUpdCnt = 0;		/* persist queue info every n updates */
 	pThis->bSyncQueueFiles = 0;
-	pThis->toQShutdown = ruleset_dflt_toQShutdown;
-	pThis->toActShutdown = ruleset_dflt_toActShutdown;
-	pThis->toEnq = ruleset_dflt_toEnq;
-	pThis->toWrkShutdown = ruleset_dflt_toWrkShutdown;
+	pThis->toQShutdown = ourConf->globals.ruleset_dflt_toQShutdown;
+	pThis->toActShutdown = ourConf->globals.ruleset_dflt_toActShutdown;
+	pThis->toEnq = ourConf->globals.ruleset_dflt_toEnq;
+	pThis->toWrkShutdown = ourConf->globals.ruleset_dflt_toWrkShutdown;
 	pThis->iMinMsgsPerWrkr = -1;		/* minimum messages per worker needed to start a new one */
 	pThis->bSaveOnShutdown = 1;		/* save queue on shutdown (when DA enabled)? */
 	pThis->sizeOnDiskMax = 0;		/* unlimited */
