@@ -65,9 +65,6 @@ struct dnscache_s {
 };
 typedef struct dnscache_s dnscache_t;
 
-unsigned dnscacheDefaultTTL = 24 * 60 * 60; /* 24 hrs default TTL */
-int dnscacheEnableTTL = 0; /* expire entries or not (0) ? */
-
 
 /* static data */
 DEFobjStaticHelpers
@@ -365,8 +362,8 @@ addEntry(struct sockaddr_storage *const addr, dnscache_entry_t **const pEtry)
 	assert(etry != NULL);
 	memcpy(&etry->addr, addr, SALEN((struct sockaddr*) addr));
 	etry->nUsed = 0;
-	if(dnscacheEnableTTL) {
-		etry->validUntil = time(NULL) + dnscacheDefaultTTL;
+	if(runConf->globals.dnscacheEnableTTL) {
+		etry->validUntil = time(NULL) + runConf->globals.dnscacheDefaultTTL;
 	}
 
 	memcpy(keybuf, addr, sizeof(struct sockaddr_storage));
@@ -396,12 +393,12 @@ findEntry(struct sockaddr_storage *const addr,
 	dnscache_entry_t * etry = hashtable_search(dnsCache.ht, addr);
 	DBGPRINTF("findEntry: 1st lookup found %p\n", etry);
 
-	if(etry == NULL || (dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
+	if(etry == NULL || (runConf->globals.dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
 		pthread_rwlock_unlock(&dnsCache.rwlock);
 		pthread_rwlock_wrlock(&dnsCache.rwlock);
 		etry = hashtable_search(dnsCache.ht, addr); /* re-query, might have changed */
 		DBGPRINTF("findEntry: 2nd lookup found %p\n", etry);
-		if(etry == NULL || (dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
+		if(etry == NULL || (runConf->globals.dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
 			if(etry != NULL) {
 				DBGPRINTF("hashtable: entry timed out, discarding it; "
 					"valid until %lld, now %lld\n",

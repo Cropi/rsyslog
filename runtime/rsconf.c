@@ -204,6 +204,8 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.ruleset_dflt_toActShutdown = 1000;
 	pThis->globals.ruleset_dflt_toEnq = 2000;
 	pThis->globals.ruleset_dflt_toWrkShutdown = 60000;
+	pThis->globals.dnscacheDefaultTTL = 24 * 60 * 60;
+	pThis->globals.dnscacheEnableTTL = 0;
 
 	/* handle environment variables */
 	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");

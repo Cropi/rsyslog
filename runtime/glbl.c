@@ -1526,9 +1526,9 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutworkerthreadshutdown")) {
 			loadConf->globals.ruleset_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.default")) {
-			dnscacheDefaultTTL = cnfparamvals[i].val.d.n;
+			loadConf->globals.dnscacheDefaultTTL = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.enable")) {
-			dnscacheEnableTTL = cnfparamvals[i].val.d.n;
+			loadConf->globals.dnscacheEnableTTL = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.supportcompressionextension")) {
 			bSupportCompressionExtension = cnfparamvals[i].val.d.n;
 		} else {

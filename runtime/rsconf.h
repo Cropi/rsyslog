@@ -116,6 +116,8 @@ struct globals_s {
 	int ruleset_dflt_toActShutdown;	/* action shutdown (in phase 2) */
 	int ruleset_dflt_toEnq;		/* timeout for queue enque */
 	int ruleset_dflt_toWrkShutdown;	/* timeout for worker thread shutdown */
+	unsigned dnscacheDefaultTTL; /* 24 hrs default TTL */
+	int dnscacheEnableTTL; /* expire entries or not (0) ? */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
