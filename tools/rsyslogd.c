@@ -1406,13 +1406,13 @@ initAll(int argc, char **argv)
 			fprintf (stderr, "rsyslogd: the -4 command line option will go away "
 				 "soon.\nPlease use the global(net.ipprotocol=\"ipv4-only\") "
 				 "configuration parameter instead.\n");
-	                glbl.SetDefPFFamily(PF_INET);
+	                // glbl.SetDefPFFamily(PF_INET);
 			break;
 		case '6':
 			fprintf (stderr, "rsyslogd: the -6 command line option will go away "
 				 "soon.\nPlease use the global(net.ipprotocol=\"ipv6-only\") "
 				 "configuration parameter instead.\n");
-			glbl.SetDefPFFamily(PF_INET6);
+					// glbl.SetDefPFFamily(PF_INET6);
 			break;
 		case 'A':
 			fprintf (stderr, "rsyslogd: the -A command line option will go away "
@@ -1524,13 +1524,13 @@ initAll(int argc, char **argv)
 			fprintf (stderr, "rsyslogd: the -w command line option will go away "
 				 "soon.\nPlease use the global(net.permitWarning=\"off\") "
 				 "configuration parameter instead.\n");
-			glbl.SetOption_DisallowWarning(0);
+			glbl.SetOptionDisallowWarning(0);
 			break;
 		case 'x':		/* disable dns for remote messages */
 			fprintf (stderr, "rsyslogd: the -x command line option will go away "
 				 "soon.\nPlease use the global(net.enableDNS=\"off\") "
 				 "configuration parameter instead.\n");
-			glbl.SetDisableDNS(1);
+				// glbl.SetDisableDNS(1);
 			break;
 		case 'h':
 		case '?':

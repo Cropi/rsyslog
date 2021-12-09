@@ -57,42 +57,42 @@ extern stdlog_channel_t stdlog_hdl;
 
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
-	uchar* (*GetWorkDir)(rsconf_t *cnf);
-	int (*GetMaxLine)(void);
-
-#define SIMP_PROP2(name, dataType) \
-	dataType (*Get##name)(rsconf_t *cnf); \
-	rsRetVal (*Set##name)(dataType);
-
-	SIMP_PROP2(DropMalPTRMsgs, int)
-	SIMP_PROP2(DefPFFamily, int)
-	SIMP_PROP2(DisableDNS, int)
-	SIMP_PROP2(ParserControlCharacterEscapePrefix, uchar)
-	SIMP_PROP2(ParserDropTrailingLFOnReception, int)
-	SIMP_PROP2(ParserEscapeControlCharactersOnReceive, int)
-	SIMP_PROP2(ParserSpaceLFOnReceive, int)
-	SIMP_PROP2(ParserEscape8BitCharactersOnReceive, int)
-	SIMP_PROP2(ParserEscapeControlCharacterTab, int)
-	SIMP_PROP2(ParserEscapeControlCharactersCStyle, int)
-	SIMP_PROP2(ParseHOSTNAMEandTAG, int)
-	uchar* (*GetDfltNetstrmDrvrCAF)(rsconf_t *cnf);
-	uchar* (*GetDfltNetstrmDrvrCertFile)(rsconf_t *cnf);
-	uchar* (*GetDfltNetstrmDrvrKeyFile)(rsconf_t *cnf);
-	uchar* (*GetDfltNetstrmDrvr)(rsconf_t *cnf);
-
-
 #define SIMP_PROP(name, dataType) \
-	dataType (*Get##name)(void); \
+	SIMP_PROP_GET(name, dataType) \
+	SIMP_PROP_SET(name, dataType)
+#define SIMP_PROP_SET(name, dataType) \
 	rsRetVal (*Set##name)(dataType);
-	SIMP_PROP(OptimizeUniProc, int)
-	SIMP_PROP(PreserveFQDN, int)
-	SIMP_PROP(Option_DisallowWarning, int)
+#define SIMP_PROP_GET(name, dataType) \
+	dataType (*Get##name)(rsconf_t *);
+
+	SIMP_PROP_GET(DefPFFamily, int)
+	SIMP_PROP_GET(DfltNetstrmDrvrCAF, uchar*)
+	SIMP_PROP_GET(DfltNetstrmDrvrCertFile, uchar*)
+	SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, uchar*)
+	SIMP_PROP_GET(DfltNetstrmDrvr, uchar*)
+	SIMP_PROP_GET(WorkDir, uchar*)
+	SIMP_PROP_GET(DropMalPTRMsgs, int)
+	SIMP_PROP_GET(DisableDNS, int)
+	SIMP_PROP_GET(ParserEscapeControlCharactersOnReceive, int)
+	SIMP_PROP_GET(ParserControlCharacterEscapePrefix, uchar)
+	SIMP_PROP_GET(ParserDropTrailingLFOnReception, int)
+	SIMP_PROP_GET(ParserSpaceLFOnReceive, int)
+	SIMP_PROP_GET(ParserEscape8BitCharactersOnReceive, int)
+	SIMP_PROP_GET(ParserEscapeControlCharacterTab, int)
+	SIMP_PROP_GET(ParserEscapeControlCharactersCStyle, int)
+	SIMP_PROP_GET(ParseHOSTNAMEandTAG, int)
+
+#undef SIMP_PROP_GET
+#define SIMP_PROP_GET(name, dataType) \
+	dataType (*Get##name)(void);
+
+	SIMP_PROP_GET(MaxLine, int)
+	SIMP_PROP_GET(PreserveFQDN, int)
+	SIMP_PROP_GET(mainqCnfObj, struct cnfobj*)
+	SIMP_PROP(OptionDisallowWarning, int)
 	SIMP_PROP(LocalFQDNName, uchar*)
-	SIMP_PROP(mainqCnfObj, struct cnfobj*)
 	SIMP_PROP(LocalHostName, uchar*)
 	SIMP_PROP(LocalDomain, uchar*)
-	SIMP_PROP(StripDomains, char**)
-	SIMP_PROP(LocalHosts, char**)
 	/* added v3, 2009-06-30 */
 	rsRetVal (*GenerateLocalHostNameProperty)(void);
 	prop_t* (*GetLocalHostNameProp)(void);
@@ -117,7 +117,8 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetSourceIPofLocalClient)(uchar*);		/* [ar] */
 	/* v9 - 2015-01-12  SetMaxLine method removed */
 #undef	SIMP_PROP
-#undef	SIMP_PROP2
+#undef	SIMP_PROP_GET
+#undef	SIMP_PROP_SET
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
 /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */

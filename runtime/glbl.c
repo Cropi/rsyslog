@@ -84,7 +84,7 @@ static uchar *stdlog_chanspec = NULL;
 #endif
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
-static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
+static int optionDisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static prop_t *propLocalIPIF = NULL;/* IP address to report for the local host (default is 127.0.0.1) */
 static int propLocalIPIF_set = 0;	/* is propLocalIPIF already set? */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
@@ -93,10 +93,6 @@ static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup, e
 static uchar *LocalHostNameOverride = NULL;/* user-overridden hostname - read-only after startup */
 static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup, except HUP */
 static uchar *LocalDomain = NULL;/* our local domain name  - read-only after startup, except HUP */
-static char **StripDomains = NULL;
-/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
-static char **LocalHosts = NULL;
-/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
 int glblUnloadModules = 1;
 char** glblDbgFiles = NULL;
@@ -226,13 +222,45 @@ GetGnuTLSLoglevel(rsconf_t *cnf)
 	return(cnf->globals.iGnuTLSLoglevel);
 }
 
+#define SIMP_PROP(nameFunc, nameVar, dataType) \
+	SIMP_PROP_GET(nameFunc, nameVar, dataType) \
+	SIMP_PROP_SET(nameFunc, nameVar, dataType)
+#define SIMP_PROP_SET(nameFunc, nameVar, dataType) \
+static rsRetVal Set##nameFunc(dataType newVal) \
+{ \
+	loadConf->globals.nameVar = newVal; \
+	return RS_RET_OK; \
+}
+#define SIMP_PROP_GET(nameFunc, nameVar, dataType) \
+static dataType Get##nameFunc(rsconf_t *cnf) \
+{ \
+	return(cnf->globals.nameVar); \
+}
+
+SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
+SIMP_PROP(DisableDNS, bDisableDNS, int)
+SIMP_PROP(ParserEscapeControlCharactersCStyle, parser.bParserEscapeCCCStyle, int)
+SIMP_PROP(ParseHOSTNAMEandTAG, parser.bParseHOSTNAMEandTAG, int)
+
+/* We omit the setter on purpose as we want to customize it */
+SIMP_PROP_GET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
+SIMP_PROP_GET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
+SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*)
+SIMP_PROP_GET(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
+SIMP_PROP_GET(ParserDropTrailingLFOnReception, parser.bDropTrailingLF, int)
+SIMP_PROP_GET(ParserEscapeControlCharactersOnReceive, parser.bEscapeCCOnRcv, int)
+SIMP_PROP_GET(ParserSpaceLFOnReceive, parser.bSpaceLFOnRcv, int)
+SIMP_PROP_GET(ParserEscape8BitCharactersOnReceive, parser.bEscape8BitChars, int)
+SIMP_PROP_GET(ParserEscapeControlCharacterTab, parser.bEscapeTab, int)
+SIMP_PROP_GET(DefPFFamily, iDefPFFamily, int)
+
+#undef SIMP_PROP_SET
+#undef SIMP_PROP_GET
+
 /* define a macro for the simple properties' set and get functions
  * (which are always the same). This is only suitable for pretty
  * simple cases which require neither checks nor memory allocation.
  */
-#define SIMP_PROP(nameFunc, nameVar, dataType) \
-	SIMP_PROP_GET(nameFunc, nameVar, dataType) \
-	SIMP_PROP_SET(nameFunc, nameVar, dataType)
 #define SIMP_PROP_SET(nameFunc, nameVar, dataType) \
 static rsRetVal Set##nameFunc(dataType newVal) \
 { \
@@ -245,46 +273,9 @@ static dataType Get##nameFunc(void) \
 	return(nameVar); \
 }
 
-#define SIMP_PROP2(nameFunc, nameVar, dataType) \
-	SIMP_PROP_GET2(nameFunc, nameVar, dataType) \
-	SIMP_PROP_SET2(nameFunc, nameVar, dataType)
-#define SIMP_PROP_SET2(nameFunc, nameVar, dataType) \
-static rsRetVal Set##nameFunc(dataType newVal) \
-{ \
-	loadConf->globals.nameVar = newVal; \
-	return RS_RET_OK; \
-}
-#define SIMP_PROP_GET2(nameFunc, nameVar, dataType) \
-static dataType Get##nameFunc(rsconf_t *cnf) \
-{ \
-	assert(cnf != NULL); \
-	if (cnf == NULL) \
-		LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED, \
-			"[%s]%d - %s: BAD NEWS\n", __FILE__, __LINE__,  __func__); \
-	return(cnf->globals.nameVar); \
-}
-
-SIMP_PROP2(DropMalPTRMsgs, bDropMalPTRMsgs, int)
-SIMP_PROP2(DefPFFamily, iDefPFFamily, int)
-SIMP_PROP2(DisableDNS, bDisableDNS, int)
-SIMP_PROP2(ParserEscapeControlCharactersCStyle, parser.bParserEscapeCCCStyle, int)
-SIMP_PROP2(ParseHOSTNAMEandTAG, parser.bParseHOSTNAMEandTAG, int)
-
-/* We omit the setter on purpose as we want to customize it */
-SIMP_PROP_GET2(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
-SIMP_PROP_GET2(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
-SIMP_PROP_GET2(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*)
-SIMP_PROP_GET2(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
-SIMP_PROP_GET2(ParserDropTrailingLFOnReception, parser.bDropTrailingLF, int)
-SIMP_PROP_GET2(ParserEscapeControlCharactersOnReceive, parser.bEscapeCCOnRcv, int)
-SIMP_PROP_GET2(ParserSpaceLFOnReceive, parser.bSpaceLFOnRcv, int)
-SIMP_PROP_GET2(ParserEscape8BitCharactersOnReceive, parser.bEscape8BitChars, int)
-SIMP_PROP_GET2(ParserEscapeControlCharacterTab, parser.bEscapeTab, int)
-
-SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
-SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
-SIMP_PROP(StripDomains, StripDomains, char**)
-SIMP_PROP(LocalHosts, LocalHosts, char**)
+SIMP_PROP(OptionDisallowWarning, optionDisallowWarning, int)
+SIMP_PROP_GET(PreserveFQDN, bPreserveFQDN, int)
+SIMP_PROP_GET(mainqCnfObj, mainqCnfObj, struct cnfobj *)
 #ifdef USE_UNLIMITED_SELECT
 SIMP_PROP(FdSetSize, iFdSetSize, int)
 #endif
@@ -293,10 +284,6 @@ SIMP_PROP(FdSetSize, iFdSetSize, int)
 #undef SIMP_PROP
 #undef SIMP_PROP_SET
 #undef SIMP_PROP_GET
-
-#undef SIMP_PROP2
-#undef SIMP_PROP_SET2
-#undef SIMP_PROP_GET2
 
 /* return global input termination status
  * rgerhards, 2009-07-20
@@ -344,7 +331,7 @@ finalize_it:
  * rgerhards, 2012-03-21
  */
 static rsRetVal
-setLocalHostIPIF(void __attribute__((unused)) *pVal, uchar *pNewVal)
+setLegacyLocalHostIPIF(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	uchar myIP[128];
 	rsRetVal localRet;
@@ -378,7 +365,7 @@ finalize_it:
  * emits an error message if not.
  * rgerhards, 2011-02-16
  */
-static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
+static rsRetVal setLegacyWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	size_t lenDir;
 	int i;
@@ -424,7 +411,7 @@ finalize_it:
 }
 
 static rsRetVal
-setDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+setLegacyDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 	FILE *fp;
 	free(loadConf->globals.pszDfltNetstrmDrvrCAF);
@@ -442,7 +429,7 @@ setDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 }
 
 static rsRetVal
-setDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+setLegacyDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 	FILE *fp;
 
@@ -461,7 +448,7 @@ setDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 }
 
 static rsRetVal
-setDfltNetstrmDrvrKeyFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+setLegacyDfltNetstrmDrvrKeyFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 	FILE *fp;
 
@@ -480,7 +467,7 @@ setDfltNetstrmDrvrKeyFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 }
 
 static rsRetVal
-setDfltNetstrmDrvr(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+setLegacyDfltNetstrmDrvr(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 	free(loadConf->globals.pszDfltNetstrmDrvr);
 	loadConf->globals.pszDfltNetstrmDrvr = pNewVal;
@@ -488,42 +475,42 @@ setDfltNetstrmDrvr(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 }
 
 static rsRetVal
-setParserControlCharacterEscapePrefix(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+setLegacyParserControlCharacterEscapePrefix(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 	loadConf->globals.parser.cCCEscapeChar = *pNewVal;
 	RETiRet;
 }
 
 static rsRetVal
-setParserDropTrailingLFOnReception(void __attribute__((unused)) *pVal, int pNewVal) {
+setLegacyParserDropTrailingLFOnReception(void __attribute__((unused)) *pVal, int pNewVal) {
 	DEFiRet;
 	loadConf->globals.parser.bDropTrailingLF = pNewVal;
 	RETiRet;
 }
 
 static rsRetVal
-setParserEscapeControlCharactersOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
+setLegacyParserEscapeControlCharactersOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
 	DEFiRet;
 	loadConf->globals.parser.bEscapeCCOnRcv = pNewVal;
 	RETiRet;
 }
 
 static rsRetVal
-setParserSpaceLFOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
+setLegacyParserSpaceLFOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
 	DEFiRet;
 	loadConf->globals.parser.bSpaceLFOnRcv = pNewVal;
 	RETiRet;
 }
 
 static rsRetVal
-setParserEscape8BitCharactersOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
+setLegacyParserEscape8BitCharactersOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
 	DEFiRet;
 	loadConf->globals.parser.bEscape8BitChars = pNewVal;
 	RETiRet;
 }
 
 static rsRetVal
-setParserEscapeControlCharacterTab(void __attribute__((unused)) *pVal, int pNewVal) {
+setLegacyParserEscapeControlCharacterTab(void __attribute__((unused)) *pVal, int pNewVal) {
 	DEFiRet;
 	loadConf->globals.parser.bEscapeTab = pNewVal;
 	RETiRet;
@@ -547,8 +534,6 @@ setMaxLine(const int64_t iNew)
 	}
 }
 
-
-
 static rsRetVal
 legacySetMaxMessageSize(void __attribute__((unused)) *pVal, int64_t iNew)
 {
@@ -557,7 +542,7 @@ legacySetMaxMessageSize(void __attribute__((unused)) *pVal, int64_t iNew)
 }
 
 static rsRetVal
-setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
+setLegacyDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	DEFiRet;
 	dbgSetDebugFile(pNewVal);
@@ -566,7 +551,7 @@ setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
 }
 
 static rsRetVal
-setDebugLevel(void __attribute__((unused)) *pVal, int level)
+setLegacyDebugLevel(void __attribute__((unused)) *pVal, int level)
 {
 	DEFiRet;
 	dbgSetDebugLevel(level);
@@ -608,19 +593,6 @@ setReportChildProcessExits(const uchar *const mode)
 		iRet = RS_RET_CONF_PARAM_INVLD;
 	}
 	RETiRet;
-}
-
-static rsRetVal
-setOption_DisallowWarning(int val)
-{
-	option_DisallowWarning = val;
-	return RS_RET_OK;
-}
-
-static int
-getOption_DisallowWarning(void)
-{
-	return option_DisallowWarning;
 }
 
 /* return our local IP.
@@ -947,47 +919,49 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
 	pIf->GetSourceIPofLocalClient = GetSourceIPofLocalClient;	/* [ar] */
 	pIf->SetSourceIPofLocalClient = SetSourceIPofLocalClient;	/* [ar] */
-	pIf->GetDisableDNS = GetDisableDNS;
 	pIf->GetMaxLine = glblGetMaxLine;
-	pIf->SetOption_DisallowWarning = setOption_DisallowWarning;
-	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
 	pIf->GetDfltNetstrmDrvrCAF = GetDfltNetstrmDrvrCAF;
 	pIf->GetDfltNetstrmDrvrCertFile = GetDfltNetstrmDrvrCertFile;
 	pIf->GetDfltNetstrmDrvrKeyFile = GetDfltNetstrmDrvrKeyFile;
 	pIf->GetDfltNetstrmDrvr = GetDfltNetstrmDrvr;
 	pIf->GetParserControlCharacterEscapePrefix = GetParserControlCharacterEscapePrefix;
-	pIf->GetParserDropTrailingLFOnReception = GetParserDropTrailingLFOnReception;
-	pIf->GetParserEscapeControlCharactersOnReceive = GetParserEscapeControlCharactersOnReceive;
-	pIf->GetParserSpaceLFOnReceive = GetParserSpaceLFOnReceive;
-	pIf->GetParserEscape8BitCharactersOnReceive = GetParserEscape8BitCharactersOnReceive;
-	pIf->GetParserEscapeControlCharacterTab = GetParserEscapeControlCharacterTab;
 
 #define SIMP_PROP(name) \
-	pIf->Get##name = Get##name; \
+	SIMP_PROP_GET(name) \
+	SIMP_PROP_SET(name)
+#define SIMP_PROP_GET(name) \
+	pIf->Get##name = Get##name;
+#define SIMP_PROP_SET(name) \
 	pIf->Set##name = Set##name;
-	SIMP_PROP(DropMalPTRMsgs)
-	SIMP_PROP(DefPFFamily)
-	SIMP_PROP(PreserveFQDN);
-	SIMP_PROP(mainqCnfObj);
 	SIMP_PROP(LocalFQDNName)
 	SIMP_PROP(LocalHostName)
 	SIMP_PROP(LocalDomain)
-	SIMP_PROP(StripDomains)
-	SIMP_PROP(LocalHosts)
-	SIMP_PROP(ParserEscapeControlCharactersCStyle)
-	SIMP_PROP(ParseHOSTNAMEandTAG)
+	SIMP_PROP(OptionDisallowWarning)
+	SIMP_PROP_GET(DropMalPTRMsgs)
+	SIMP_PROP_GET(DefPFFamily)
+	SIMP_PROP_GET(DisableDNS)
+	SIMP_PROP_GET(ParserDropTrailingLFOnReception)
+	SIMP_PROP_GET(ParserEscapeControlCharactersOnReceive)
+	SIMP_PROP_GET(ParserSpaceLFOnReceive)
+	SIMP_PROP_GET(ParserEscape8BitCharactersOnReceive)
+	SIMP_PROP_GET(ParserEscapeControlCharacterTab)
+	SIMP_PROP_GET(ParserEscapeControlCharactersCStyle)
+	SIMP_PROP_GET(ParseHOSTNAMEandTAG)
+	SIMP_PROP_GET(PreserveFQDN);
+	SIMP_PROP_GET(mainqCnfObj);
 #ifdef USE_UNLIMITED_SELECT
 	SIMP_PROP(FdSetSize)
 #endif
 #undef	SIMP_PROP
-#undef	SIMP_PROP2
+#undef	SIMP_PROP_GET
+#undef	SIMP_PROP_SET
 finalize_it:
 ENDobjQueryInterface(glbl)
 
 /* Reset config variables to default values.
  * rgerhards, 2008-04-17
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+static rsRetVal resetLegacyConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	free(loadConf->globals.pszDfltNetstrmDrvr);
 	loadConf->globals.pszDfltNetstrmDrvr = NULL;
@@ -1356,7 +1330,7 @@ glblDoneLoadCnf(void)
 			continue;
 		if(!strcmp(paramblk.descr[i].name, "workdirectory")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			setWorkDir(NULL, cstr);
+			setLegacyWorkDir(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "variables.casesensitive")) {
 			const int val = (int) cnfparamvals[i].val.d.n;
 			fjson_global_do_case_sensitive_comparison(val);
@@ -1368,16 +1342,16 @@ glblDoneLoadCnf(void)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriverkeyfile")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			setDfltNetstrmDrvrKeyFile(NULL, cstr);
+			setLegacyDfltNetstrmDrvrKeyFile(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercertfile")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			setDfltNetstrmDrvrCertFile(NULL, cstr);
+			setLegacyDfltNetstrmDrvrCertFile(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercafile")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			setDfltNetstrmDrvrCAF(NULL, cstr);
+			setLegacyDfltNetstrmDrvrCAF(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			setDfltNetstrmDrvr(NULL, cstr);
+			setLegacyDfltNetstrmDrvr(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "preservefqdn")) {
 			bPreserveFQDN = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name,
@@ -1411,23 +1385,23 @@ glblDoneLoadCnf(void)
 			glblUnloadModules = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
 			uchar* tmp = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			setParserControlCharacterEscapePrefix(NULL, tmp);
+			setLegacyParserControlCharacterEscapePrefix(NULL, tmp);
 			free(tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
 			const int tmp = (int) cnfparamvals[i].val.d.n;
-			setParserDropTrailingLFOnReception(NULL, tmp);
+			setLegacyParserDropTrailingLFOnReception(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactersonreceive")) {
 			const int tmp = (int) cnfparamvals[i].val.d.n;
-			setParserEscapeControlCharactersOnReceive(NULL, tmp);
+			setLegacyParserEscapeControlCharactersOnReceive(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.spacelfonreceive")) {
 			const int tmp = (int) cnfparamvals[i].val.d.n;
-			setParserSpaceLFOnReceive(NULL, tmp);
+			setLegacyParserSpaceLFOnReceive(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escape8bitcharactersonreceive")) {
 			const int tmp = (int) cnfparamvals[i].val.d.n;
-			setParserEscape8BitCharactersOnReceive(NULL, tmp);
+			setLegacyParserEscape8BitCharactersOnReceive(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactertab")) {
 			const int tmp = (int) cnfparamvals[i].val.d.n;
-			setParserEscapeControlCharacterTab(NULL, tmp);
+			setLegacyParserEscapeControlCharacterTab(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharacterscstyle")) {
 			const int tmp = (int) cnfparamvals[i].val.d.n;
 			SetParserEscapeControlCharactersCStyle(tmp);
@@ -1494,7 +1468,7 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "net.enabledns")) {
 			SetDisableDNS(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "net.permitwarning")) {
-			setOption_DisallowWarning(!((int) cnfparamvals[i].val.d.n));
+			SetOptionDisallowWarning(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {
 			loadConf->globals.bAbortOnUncleanConfig = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.burst")) {
@@ -1582,37 +1556,37 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	storeLocalHostIPIF((uchar*)"127.0.0.1");
 
 	/* config handlers are never unregistered and need not be - we are always loaded ;) */
-	CHKiRet(regCfSysLineHdlr((uchar *)"debugfile", 0, eCmdHdlrGetWord, setDebugFile, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setDebugLevel, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugfile", 0, eCmdHdlrGetWord, setLegacyDebugFile, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setLegacyDebugLevel, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setLegacyWorkDir, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, SetDropMalPTRMsgs, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, setDfltNetstrmDrvr, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, setDfltNetstrmDrvrCAF, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, setDfltNetstrmDrvrKeyFile,
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, setLegacyDfltNetstrmDrvr, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, setLegacyDfltNetstrmDrvrCAF, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, setLegacyDfltNetstrmDrvrKeyFile,
 	NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, setDfltNetstrmDrvrCertFile, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, setLegacyDfltNetstrmDrvrCertFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLegacyLocalHostIPIF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrGoneAway, NULL, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));
 
 	/* Deprecated parser config options */
-	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, setParserControlCharacterEscapePrefix,
+	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, setLegacyParserControlCharacterEscapePrefix,
 	NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, setParserDropTrailingLFOnReception,
+	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, setLegacyParserDropTrailingLFOnReception,
 	NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, setParserEscapeControlCharactersOnReceive,
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, setLegacyParserEscapeControlCharactersOnReceive,
 	NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, setParserSpaceLFOnReceive,
+	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, setLegacyParserSpaceLFOnReceive,
 	NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, setParserEscape8BitCharactersOnReceive,
+	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, setLegacyParserEscape8BitCharactersOnReceive,
 	NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, setParserEscapeControlCharacterTab,
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, setLegacyParserEscapeControlCharacterTab,
 	NULL, NULL));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-	resetConfigVariables, NULL, NULL));
+	resetLegacyConfigVariables, NULL, NULL));
 
 	INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassInit(glbl)
@@ -1622,14 +1596,9 @@ ENDObjClassInit(glbl)
  * rgerhards, 2008-04-17
  */
 BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
-	// free(pszDfltNetstrmDrvr);
-	// free(pszDfltNetstrmDrvrCAF);
-	// free(pszDfltNetstrmDrvrKeyFile);
-	// free(pszDfltNetstrmDrvrCertFile);
 	free(LocalDomain);
 	free(LocalHostName);
 	free(LocalHostNameOverride);
-	// free(oversizeMsgErrorFile);
 	free(LocalFQDNName);
 	freeTimezoneInfo();
 	objRelease(prop, CORE_COMPONENT);

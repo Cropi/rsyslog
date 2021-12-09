@@ -442,11 +442,11 @@ processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *p
 			 */
 			*pbIsPermitted = net.isAllowedSender2((uchar*)"UDP",
 					    (struct sockaddr *)frominet, "", 0);
-	
+
 			if(*pbIsPermitted == 0) {
 				DBGPRINTF("msg is not from an allowed sender\n");
 				STATSCOUNTER_INC(lstn->ctrDisallowed, lstn->mutCtrDisallowed);
-				if(glbl.GetOption_DisallowWarning) {
+				if(glbl.GetOptionDisallowWarning) {
 					LogError(0, NO_ERRCODE,
 						"imudp: UDP message from disallowed sender discarded");
 				}
