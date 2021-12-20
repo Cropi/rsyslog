@@ -70,6 +70,12 @@ struct parsercnf_s {
 	int bPermitSlashInProgramname;
 };
 
+/* timezone specific parameters*/
+struct timezones_s {
+	tzinfo_t *tzinfos;
+	int ntzinfos;
+};
+
 /* globals are data items that are really global, and can be set only
  * once (at least in theory, because the legacy system permits them to
  * be re-set as often as the user likes).
@@ -219,6 +225,7 @@ struct rsconf_s {
 	 *  - actions
 	 * Of course, we need to debate if we shall change that some time...
 	 */
+	timezones_t timezones;
 };
 
 

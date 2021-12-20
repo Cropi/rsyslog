@@ -109,9 +109,6 @@ static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask); /* si
 #endif
 static uchar *SourceIPofLocalClient = NULL;	/* [ar] Source IP for local client to be used on multihomed host */
 
-tzinfo_t *tzinfos = NULL;
-static int ntzinfos;
-
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
 	{ "workdirectory", eCmdHdlrString, 0 },
@@ -1011,26 +1008,26 @@ glblPrepCnf(void)
 }
 
 
-static void
-freeTimezoneInfo(void)
+void
+freeTimezoneInfo(rsconf_t *cnf)
 {
 	int i;
-	for(i = 0 ; i < ntzinfos ; ++i)
-		free(tzinfos[i].id);
-	free(tzinfos);
-	tzinfos = NULL;
+	for(i = 0 ; i < cnf->timezones.ntzinfos; ++i)
+		free(cnf->timezones.tzinfos[i].id);
+	free(cnf->timezones.tzinfos);
+	cnf->timezones.tzinfos = NULL;
 }
 
 static void
-displayTzinfos(void)
+displayTzinfos(rsconf_t *cnf)
 {
 	int i;
 	if(!Debug)
 		return;
-	for(i = 0 ; i < ntzinfos ; ++i)
+	for(i = 0 ; i < cnf->timezones.ntzinfos ; ++i)
 		dbgprintf("tzinfo: '%s':%c%2.2d:%2.2d\n",
-			tzinfos[i].id, tzinfos[i].offsMode,
-			tzinfos[i].offsHour, tzinfos[i].offsMin);
+			cnf->timezones.tzinfos[i].id, cnf->timezones.tzinfos[i].offsMode,
+			cnf->timezones.tzinfos[i].offsHour, cnf->timezones.tzinfos[i].offsMin);
 }
 
 
@@ -1039,20 +1036,22 @@ displayTzinfos(void)
  * initialization.
  */
 static rsRetVal
-addTimezoneInfo(uchar *tzid, char offsMode, int8_t offsHour, int8_t offsMin)
+addTimezoneInfo(rsconf_t *cnf, uchar *tzid, char offsMode, int8_t offsHour, int8_t offsMin)
 {
 	DEFiRet;
 	tzinfo_t *newti;
-	CHKmalloc(newti = realloc(tzinfos, (ntzinfos+1)*sizeof(tzinfo_t)));
-	if((newti[ntzinfos].id = strdup((char*)tzid)) == NULL) {
+	CHKmalloc(newti = realloc(
+		cnf->timezones.tzinfos,
+		(cnf->timezones.ntzinfos+1)*sizeof(tzinfo_t)));
+	if((newti[cnf->timezones.ntzinfos].id = strdup((char*)tzid)) == NULL) {
 		free(newti);
 		DBGPRINTF("addTimezoneInfo: strdup failed with OOM\n");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	newti[ntzinfos].offsMode = offsMode;
-	newti[ntzinfos].offsHour = offsHour;
-	newti[ntzinfos].offsMin = offsMin;
-	++ntzinfos, tzinfos = newti;
+	newti[cnf->timezones.ntzinfos].offsMode = offsMode;
+	newti[cnf->timezones.ntzinfos].offsHour = offsHour;
+	newti[cnf->timezones.ntzinfos].offsMin = offsMin;
+	++cnf->timezones.ntzinfos, cnf->timezones.tzinfos = newti;
 finalize_it:
 	RETiRet;
 }
@@ -1067,7 +1066,8 @@ bs_arrcmp_tzinfo(const void *s1, const void *s2)
 tzinfo_t*
 glblFindTimezoneInfo(char *id)
 {
-	return (tzinfo_t*) bsearch(id, tzinfos, ntzinfos, sizeof(tzinfo_t), bs_arrcmp_tzinfo);
+	return (tzinfo_t*) bsearch(id, runConf->timezones.tzinfos,
+		runConf->timezones.ntzinfos, sizeof(tzinfo_t), bs_arrcmp_tzinfo);
 }
 
 /* handle the timezone() object. Each incarnation adds one additional
@@ -1148,7 +1148,7 @@ glblProcessTimezone(struct cnfobj *o)
 		goto done;
 	}
 
-	addTimezoneInfo(id, offsMode, offsHour, offsMin);
+	addTimezoneInfo(loadConf, id, offsMode, offsHour, offsMin);
 
 done:
 	cnfparamvalsDestruct(pvals, &timezonepblk);
@@ -1316,11 +1316,12 @@ glblDoneLoadCnf(void)
 	DEFiRet;
 	CHKiRet(objUse(net, CORE_COMPONENT));
 
-	if(ntzinfos > 0) {
-		qsort(tzinfos, ntzinfos, sizeof(tzinfo_t), qs_arrcmp_tzinfo);
+	if(loadConf->timezones.ntzinfos > 0) {
+		qsort(loadConf->timezones.tzinfos,
+			loadConf->timezones.ntzinfos, sizeof(tzinfo_t), qs_arrcmp_tzinfo);
 	}
-	DBGPRINTF("Timezone information table (%d entries):\n", ntzinfos);
-	displayTzinfos();
+	DBGPRINTF("Timezone information table (%d entries):\n", loadConf->timezones.ntzinfos);
+	displayTzinfos(loadConf);
 
 	if(cnfparamvals == NULL)
 		goto finalize_it;
@@ -1600,7 +1601,6 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	free(LocalHostName);
 	free(LocalHostNameOverride);
 	free(LocalFQDNName);
-	freeTimezoneInfo();
 	objRelease(prop, CORE_COMPONENT);
 	if(propLocalHostNameToDelete != NULL)
 		prop.Destruct(&propLocalHostNameToDelete);

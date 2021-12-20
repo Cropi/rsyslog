@@ -1016,7 +1016,7 @@ formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 	int iDay;
 	assert(ts != NULL);
 	assert(pBuf != NULL);
-	
+
 	pBuf[0] = monthNames[(ts->month - 1)% 12][0];
 	pBuf[1] = monthNames[(ts->month - 1) % 12][1];
 	pBuf[2] = monthNames[(ts->month - 1) % 12][2];

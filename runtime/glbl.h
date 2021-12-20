@@ -165,5 +165,6 @@ const uchar* glblGetOperatingStateFile(rsconf_t *cnf);
 int glblGetOversizeMsgInputMode(rsconf_t *cnf);
 int glblReportOversizeMessage(rsconf_t *cnf);
 void glblReportChildProcessExit(rsconf_t *cnf, const uchar *name, pid_t pid, int status);
+void freeTimezoneInfo(rsconf_t *cnf);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

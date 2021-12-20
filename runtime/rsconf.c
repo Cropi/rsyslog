@@ -225,6 +225,10 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
 		pThis->globals.bProcessInternalMessages = 1;
 
+	/* timezone specific*/
+	pThis->timezones.tzinfos = NULL;
+	pThis->timezones.ntzinfos = 0;
+
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
@@ -302,6 +306,7 @@ CODESTARTobjDestruct(rsconf)
 	tplDeleteAll(pThis);
 	dynstats_destroyAllBuckets();
 	perctileBucketsDestruct();
+	freeTimezoneInfo(pThis);
 	free(pThis->globals.mainQ.pszMainMsgQFName);
 	free(pThis->globals.pszConfDAGFile);
 	free(pThis->globals.pszWorkDir);
