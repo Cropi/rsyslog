@@ -1324,7 +1324,7 @@ initAll(int argc, char **argv)
 		case 'N': /* enable config verify mode */
 		case 'q': /* add hostname if DNS resolving has failed */
 		case 'Q': /* dont resolve hostnames in ACL to IPs */
-		case 'S': /* Source IP for local client to be used on multihomed host */
+		case 'S': /* Sqource IP for local client to be used on multihomed host */
 		case 'T': /* chroot on startup (primarily for testing) */
 		case 'u': /* misc user settings */
 		case 'w': /* disable disallowed host warnings */
@@ -1755,6 +1755,35 @@ DEFFUNC_llExecFunc(doHUPActions)
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
 
+#ifdef ENABLE_DYNAMIC_CONFIG_RELOAD
+static void
+doDynamicCnfReload(void)
+{
+	DEFiRet;
+	resetErrMsgsFlag();
+	iRet = rsconf.Load(&ourConf, ConfFile);
+	if((iRet == RS_RET_CONF_FILE_NOT_FOUND) || (iRet == RS_RET_NO_ACTIONS)) {
+		/* if there are "hard" errors that needs us to abort in some cases, then
+		 * we do not abort but continue with actually running config
+		 */
+		ABORT_FINALIZE(iRet);
+	}
+	if(hadErrMsgs()) {
+		if(loadConf->globals.bAbortOnUncleanConfig) {
+			fprintf(stderr, "rsyslogd: global(AbortOnUncleanConfig=\"on\") is set, and "
+				"config is not clean.\n"
+				"Check error log for details, fix errors and restart. As a last\n"
+				"resort, you may want to use global(AbortOnUncleanConfig=\"off\") \n"
+				"to permit a startup with a dirty config.\n");
+			exit(2);
+		}
+		iRet = RS_RET_OK;
+	}
+	iRet = rsconf.Activate(ourConf);
+finalize_it:
+	return;
+}
+#endif
 
 /* This function processes a HUP after one has been detected. Note that this
  * is *NOT* the sighup handler. The signal is recorded by the handler, that record
@@ -1771,7 +1800,7 @@ doHUP(void)
 {
 	char buf[512];
 
-	if(ourConf->globals.bLogStatusMsgs) {
+	if(runConf->globals.bLogStatusMsgs) {
 		snprintf(buf, sizeof(buf),
 			 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION
 			 "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"] rsyslogd was HUPed",
@@ -1781,10 +1810,14 @@ doHUP(void)
 	}
 
 	queryLocalHostname(); /* re-read our name */
-	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
+	ruleset.IterateAllActions(runConf, doHUPActions, NULL);
 	modDoHUP();
 	lookupDoHUP();
 	errmsgDoHUP();
+
+#ifdef ENABLE_DYNAMIC_CONFIG_RELOAD
+	doDynamicCnfReload();
+#endif
 }
 
 /* rsyslogdDoDie() is a signal handler. If called, it sets the bFinished variable

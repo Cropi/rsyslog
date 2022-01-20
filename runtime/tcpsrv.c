@@ -746,7 +746,7 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 	DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
 
 	while(numEntries > 0) {
-		if(glbl.GetGlobalInputTermState() == 1)
+		if(glbl.GetGlobalInputTermState() == 1 || pThis->bTerminateInput == 1)
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		if(numEntries == 1) {
 			/* process self, save context switch */
@@ -841,12 +841,12 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 
 		/* wait for io to become ready */
 		CHKiRet(nssel.Wait(pSel, &nfds));
-		if(glbl.GetGlobalInputTermState() == 1)
+		if(glbl.GetGlobalInputTermState() == 1 || pThis->bTerminateInput == 1)
 			break; /* terminate input! */
 
 		iWorkset = 0;
 		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
-			if(glbl.GetGlobalInputTermState() == 1)
+			if(glbl.GetGlobalInputTermState() == 1 || pThis->bTerminateInput == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
@@ -865,7 +865,7 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 		/* now check the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
 		while(nfds && iTCPSess != -1) {
-			if(glbl.GetGlobalInputTermState() == 1)
+			if(glbl.GetGlobalInputTermState() == 1 || pThis->bTerminateInput == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			localRet = nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD,
 				&bIsReady, &nfds);
@@ -939,12 +939,18 @@ DoRun(tcpsrv_t *pThis, nspoll_t **ppPoll)
 		DBGPRINTF("Added listener %d\n", i);
 	}
 
-	while(glbl.GetGlobalInputTermState() == 0) {
+	static int ii = 0;
+	ii++;
+	DBGPRINTF("[%i]tcpsrv: %i\n", ii, 0);
+	while(glbl.GetGlobalInputTermState() == 0 && pThis->bTerminateInput == 0) {
+		DBGPRINTF("[%i]tcpsrv: %i\n", ii, 1);
 		numEntries = sizeof(workset)/sizeof(nsd_epworkset_t);
 		localRet = nspoll.Wait(pPoll, -1, &numEntries, workset);
-		if(glbl.GetGlobalInputTermState() == 1)
+		DBGPRINTF("[%i]tcpsrv: %i\n", ii, 2);
+		if(glbl.GetGlobalInputTermState() == 1 || pThis->bTerminateInput == 1)
 			break; /* terminate input! */
 
+		DBGPRINTF("[%i]tcpsrv: %i\n", ii, 3);
 		/* check if we need to ignore the i/o ready state. We do this if we got an invalid
 		 * return state. Validly, this can happen for RS_RET_EINTR, for other cases it may
 		 * not be the right thing, but what is the right thing is really hard at this point...
@@ -952,8 +958,11 @@ DoRun(tcpsrv_t *pThis, nspoll_t **ppPoll)
 		if(localRet != RS_RET_OK)
 			continue;
 
+		DBGPRINTF("[%i]tcpsrv: %i\n", ii, 4);
 		processWorkset(pThis, pPoll, numEntries, workset);
+		DBGPRINTF("[%i]tcpsrv: %i\n", ii, 5);
 	}
+	DBGPRINTF("[%i]tcpsrv: %i\n", ii, 6);
 
 	/* remove the tcp listen sockets from the epoll set */
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
@@ -1021,6 +1030,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->pszDrvrName = NULL;
 	pThis->bPreserveCase = 1; /* preserve case in fromhost; default to true. */
 	pThis->DrvrTlsVerifyDepth = 0;
+	pThis->bTerminateInput = 0;
 ENDobjConstruct(tcpsrv)
 
 
@@ -1287,6 +1297,16 @@ SetMaxFrameSize(tcpsrv_t *pThis, int maxFrameSize)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	pThis->maxFrameSize = maxFrameSize;
+	RETiRet;
+}
+
+
+static rsRetVal
+SetTerminateInput(tcpsrv_t *pThis)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->bTerminateInput = 1;
 	RETiRet;
 }
 
@@ -1611,6 +1631,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
+	pIf->SetTerminateInput = SetTerminateInput;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

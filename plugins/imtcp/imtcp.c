@@ -84,10 +84,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 typedef struct tcpsrv_etry_s {
 	tcpsrv_t *tcpsrv;
 	pthread_t tid;	/* the worker's thread ID */
-	struct tcpsrv_etry_s *next;
 } tcpsrv_etry_t;
-static tcpsrv_etry_t *tcpsrv_root = NULL;
-static int n_tcpsrv = 0;
 
 static permittedPeers_t *pPermPeersRoot = NULL;
 
@@ -153,13 +150,15 @@ struct instanceConf_s {
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
-	struct instanceConf_s *next;
+	instanceConf_t *next, *prev;
+	tcpsrv_etry_t *tcpsrv_etry;
+	thrdInfo_t *thrd;
 };
 
 
 struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
-	instanceConf_t *root, *tail;
+	instanceConf_t *root, *tail, *act;
 	int iTCPSessMax; /* max number of sessions */
 	int iTCPLstnMax; /* max number of sessions */
 	int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
@@ -191,6 +190,7 @@ struct modConfData_s {
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
+static pthread_mutex_t mutex;
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
@@ -353,6 +353,8 @@ createInstance(instanceConf_t **pinst)
 	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
 	CHKmalloc(inst->cnf_params = (tcpLstnParams_t*) calloc(1, sizeof(tcpLstnParams_t)));
 	inst->next = NULL;
+	inst->prev = NULL;
+	inst->thrd = NULL;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
 	inst->dfltTZ = NULL;
@@ -388,12 +390,14 @@ createInstance(instanceConf_t **pinst)
 	inst->iTCPSessMax = loadModConf->iTCPSessMax;
 
 	inst->cnf_params->pszLstnPortFileName = NULL;
+	inst->tcpsrv_etry = NULL;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
 		loadModConf->tail = loadModConf->root = inst;
 	} else {
 		loadModConf->tail->next = inst;
+		inst->prev = loadModConf->tail;
 		loadModConf->tail = inst;
 	}
 
@@ -539,9 +543,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	tcpsrv_etry_t *etry;
 	CHKmalloc(etry = (tcpsrv_etry_t*) calloc(1, sizeof(tcpsrv_etry_t)));
 	etry->tcpsrv = pOurTcpsrv;
-	etry->next = tcpsrv_root;
-	tcpsrv_root = etry;
-	++n_tcpsrv;
+	inst->tcpsrv_etry = etry;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -850,7 +852,7 @@ CODESTARTendCnfLoad
 	free(cs.pszStrmDrvrAuthMode);
 	cs.pszStrmDrvrAuthMode = NULL;
 
-	loadModConf = NULL; /* done loading */
+	// loadModConf = NULL; /* done loading */
 ENDendCnfLoad
 
 
@@ -876,23 +878,28 @@ CODESTARTcheckCnf
 				"no listeners defined - no input will be gathered");
 		iRet = RS_RET_NO_LISTNERS;
 	}
+	loadModConf->act = loadModConf->root;
 ENDcheckCnf
 
+static rsRetVal freeCnf(void *ptr);
 
 BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
+	modConfData_t *oldCnf;
 CODESTARTactivateCnfPrePrivDrop
+	oldCnf = runModConf;
 	runModConf = pModConf;
-	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+	for(inst = runModConf->act ; inst != NULL ; inst = inst->next) {
 		addListner(runModConf, inst);
 	}
-	if(tcpsrv_root == NULL)
+	if(runModConf->root == NULL || runModConf->root->tcpsrv_etry == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
-	tcpsrv_etry_t *etry = tcpsrv_root;
-	while(etry != NULL) {
-		CHKiRet(tcpsrv.ConstructFinalize(etry->tcpsrv));
-		etry = etry->next;
+	for(inst = runModConf->act ; inst != NULL ; inst = inst->next) {
+		CHKiRet(tcpsrv.ConstructFinalize(inst->tcpsrv_etry->tcpsrv));
 	}
+	/* if there is an already running config, we need to free it */
+	if (oldCnf != NULL)
+		freeCnf((void*)oldCnf);
 finalize_it:
 ENDactivateCnfPrePrivDrop
 
@@ -902,6 +909,25 @@ CODESTARTactivateCnf
 	/* sorry, nothing to do here... */
 ENDactivateCnf
 
+static void
+freeInstance(instanceConf_t *inst)
+{
+	free((void*)inst->tcpsrv_etry);
+	free((void*)inst->pszBindRuleset);
+	free((void*)inst->pszStrmDrvrAuthMode);
+	free((void*)inst->pszStrmDrvrName);
+	free((void*)inst->pszStrmDrvrPermitExpiredCerts);
+	free((void*)inst->pszStrmDrvrCAFile);
+	free((void*)inst->pszStrmDrvrKeyFile);
+	free((void*)inst->pszStrmDrvrCertFile);
+	free((void*)inst->gnutlsPriorityString);
+	free((void*)inst->pszInputName);
+	free((void*)inst->dfltTZ);
+	if(inst->pPermPeersRoot != NULL) {
+		net.DestructPermittedPeers(&inst->pPermPeersRoot);
+	}
+	free(inst);
+}
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
@@ -918,42 +944,223 @@ CODESTARTfreeCnf
 	}
 
 	for(inst = pModConf->root ; inst != NULL ; ) {
-		free((void*)inst->pszBindRuleset);
-		free((void*)inst->pszStrmDrvrAuthMode);
-		free((void*)inst->pszStrmDrvrName);
-		free((void*)inst->pszStrmDrvrPermitExpiredCerts);
-		free((void*)inst->pszStrmDrvrCAFile);
-		free((void*)inst->pszStrmDrvrKeyFile);
-		free((void*)inst->pszStrmDrvrCertFile);
-		free((void*)inst->gnutlsPriorityString);
-		free((void*)inst->pszInputName);
-		free((void*)inst->dfltTZ);
-		if(inst->pPermPeersRoot != NULL) {
-			net.DestructPermittedPeers(&inst->pPermPeersRoot);
-		}
 		del = inst;
 		inst = inst->next;
-		free(del);
+		tcpsrv.Destruct(&del->tcpsrv_etry->tcpsrv);
+		freeInstance(del);
 	}
 ENDfreeCnf
+
+#define USTR_EQUALS(var) ((l->var == NULL) ? (r->var == NULL) : !ustrcmp(l->var, r->var))
+#define INT_EQUALS(var) (l->var == r->var)
+
+/* Compare 2 module confs, return 1 if they equal, otherwise 0 */
+static int
+modulesEqual(const modConfData_t *l, const modConfData_t *r)
+{
+	assert(l != NULL && r != NULL);
+	return (
+		INT_EQUALS(iTCPSessMax) &&
+		INT_EQUALS(iTCPLstnMax) &&
+		INT_EQUALS(iStrmDrvrMode) &&
+		INT_EQUALS(iStrmDrvrExtendedCertCheck) &&
+		INT_EQUALS(iStrmDrvrSANPreference) &&
+		INT_EQUALS(iStrmTlsVerifyDepth) &&
+		INT_EQUALS(iAddtlFrameDelim) &&
+		INT_EQUALS(maxFrameSize) &&
+		INT_EQUALS(bSuppOctetFram) &&
+		INT_EQUALS(bDisableLFDelim) &&
+		INT_EQUALS(discardTruncatedMsg) &&
+		INT_EQUALS(bUseFlowControl) &&
+		INT_EQUALS(bKeepAlive) &&
+		INT_EQUALS(iKeepAliveIntvl) &&
+		INT_EQUALS(iKeepAliveProbes) &&
+		INT_EQUALS(iKeepAliveTime) &&
+		INT_EQUALS(bEmitMsgOnClose) &&
+		INT_EQUALS(bPreserveCase) &&
+		USTR_EQUALS(gnutlsPriorityString) &&
+		USTR_EQUALS(pszStrmDrvrName) &&
+		USTR_EQUALS(pszStrmDrvrAuthMode) &&
+		USTR_EQUALS(pszStrmDrvrPermitExpiredCerts) &&
+		USTR_EQUALS(pszStrmDrvrCAFile) &&
+		USTR_EQUALS(pszStrmDrvrKeyFile) &&
+		USTR_EQUALS(pszStrmDrvrCertFile) &&
+		net.PermittedPeersEqual(l->pPermPeersRoot, r->pPermPeersRoot)
+	);
+}
+
+/* Compare 2 instances, return 1 if they equal, otherwise 0 */
+static int
+instancesEqual(const instanceConf_t *l, const instanceConf_t *r) {
+	assert(l != NULL && r != NULL);
+	return (
+		INT_EQUALS(iTCPSessMax) &&
+		INT_EQUALS(iTCPLstnMax) &&
+		INT_EQUALS(bSPFramingFix) &&
+		INT_EQUALS(ratelimitBurst) &&
+		INT_EQUALS(iAddtlFrameDelim) &&
+		INT_EQUALS(maxFrameSize) &&
+		INT_EQUALS(bUseFlowControl) &&
+		INT_EQUALS(bDisableLFDelim) &&
+		INT_EQUALS(discardTruncatedMsg) &&
+		INT_EQUALS(bEmitMsgOnClose) &&
+		INT_EQUALS(bPreserveCase) &&
+		INT_EQUALS(iStrmDrvrMode) &&
+		INT_EQUALS(iStrmDrvrExtendedCertCheck) &&
+		INT_EQUALS(iStrmDrvrSANPreference) &&
+		INT_EQUALS(iStrmTlsVerifyDepth) &&
+		INT_EQUALS(bKeepAlive) &&
+		INT_EQUALS(iKeepAliveIntvl) &&
+		INT_EQUALS(iKeepAliveProbes) &&
+		INT_EQUALS(iKeepAliveTime) &&
+		INT_EQUALS(cnf_params->bSuppOctetFram) &&
+		USTR_EQUALS(cnf_params->pszPort) &&
+		USTR_EQUALS(cnf_params->pszAddr) &&
+		USTR_EQUALS(cnf_params->pszLstnPortFileName) &&
+		USTR_EQUALS(cnf_params->pszStrmDrvrName) &&
+		USTR_EQUALS(pszInputName) &&
+		USTR_EQUALS(dfltTZ) &&
+		USTR_EQUALS(pszStrmDrvrName) &&
+		USTR_EQUALS(pszStrmDrvrAuthMode) &&
+		USTR_EQUALS(pszStrmDrvrPermitExpiredCerts) &&
+		USTR_EQUALS(pszStrmDrvrCAFile) &&
+		USTR_EQUALS(pszStrmDrvrKeyFile) &&
+		USTR_EQUALS(pszStrmDrvrCertFile) &&
+		USTR_EQUALS(gnutlsPriorityString) &&
+		net.PermittedPeersEqual(l->pPermPeersRoot, r->pPermPeersRoot)
+		/* TODO compare ruleset */
+	);
+}
+
+#undef USTR_EQUALS
+#undef INT_EQUALS
+
+/* unlink instance from config and correct root,tail pointers if needed */
+static void
+unlinkInstance(modConfData_t *modCnf, instanceConf_t *inst)
+{
+	if (modCnf->root == inst)
+		modCnf->root = modCnf->root->next;
+	if (modCnf->tail == inst)
+		modCnf->tail = modCnf->tail->prev;
+	if (inst->prev)
+		inst->prev->next = inst->next;
+	if (inst->next)
+		inst->next->prev = inst->prev;
+}
+
+BEGINreloadCnf
+CODESTARTreloadCnf
+	/* there are no instances if the module was not part of the previous config */
+	if (runModConf == NULL)
+		FINALIZE;
+
+	/* if at least one of the module parameters changed, we can not use old instances, thus
+	 * we need to reload all of them. Note that not all of the module parameters force us to reload
+	 * all instances, but for simplicity I think it makes sense to do it this way and later improve it
+	 */
+	if (loadModConf != NULL) {
+		if (!modulesEqual(loadModConf, runModConf)) {
+			DBGPRINTF("imtcp: module parameters have changed. Reloading each instance.\n");
+			pthread_mutex_lock(&mutex);
+			for (instanceConf_t *runInst = runModConf->root; runInst != NULL; runInst = runInst->next) {
+				tcpsrv.SetTerminateInput(runInst->tcpsrv_etry->tcpsrv);
+				unlinkInstance(runModConf, runInst);
+				pthread_cancel(runInst->tcpsrv_etry->tid);
+			}
+			pthread_mutex_unlock(&mutex);
+			FINALIZE;
+		}
+	}
+
+	/* Check if new instance is part of old config. If indeed is, remove newly allocated resources and
+	 * reconfigure pointers(relocate it from the running config into the config being loaded)
+	 */
+	for(instanceConf_t *loadInst = loadModConf->root; loadInst != NULL ; ) {
+		instanceConf_t *actLoadInst = loadInst;
+		loadInst = loadInst->next;
+
+		for (instanceConf_t *runInst = runModConf->root; runInst != NULL; runInst = runInst->next) {
+			if (instancesEqual(actLoadInst, runInst)) {
+				DBGPRINTF("Instances %p and %p have the same content."
+					"%p will be moved to the new config and shall continue running.",
+					actLoadInst, runInst, runInst
+				)
+				if (loadModConf->act == actLoadInst)
+					loadModConf->act = loadModConf->act->next;
+				unlinkInstance(runModConf, runInst);
+				unlinkInstance(loadModConf, actLoadInst);
+
+				runInst->prev = NULL;
+				runInst->next = loadModConf->root;
+				if(loadModConf->root == NULL) {
+					loadModConf->root = loadModConf->tail = runInst;
+				} else {
+					loadModConf->root->prev = runInst;
+					loadModConf->root = runInst;
+				}
+
+				freeInstance(actLoadInst);
+				break;
+			}
+		}
+	}
+
+	/* Remove old instance when not part of the new config */
+	pthread_mutex_lock(&mutex);
+	for(instanceConf_t *runInst = runModConf->root; runInst != NULL ; ) {
+		instanceConf_t *actRunInst = runInst;
+		runInst = runInst->next;
+		int found = 0;
+
+		for (instanceConf_t *loadInst = loadModConf->root; loadInst != NULL; loadInst = loadInst->next) {
+			if (instancesEqual(actRunInst, loadInst)) {
+				found = 1;
+				break;
+			}
+		}
+
+		if (!found) { /* instance has been removed from conf, we need to terminate it */
+			DBGPRINTF("Instance %p with port %s is not part of the new imtcp config.\n",
+				actRunInst, actRunInst->cnf_params->pszPort);
+			tcpsrv.SetTerminateInput(actRunInst->tcpsrv_etry->tcpsrv);
+			unlinkInstance(runModConf, actRunInst);
+			pthread_cancel(actRunInst->tcpsrv_etry->tid);
+		}
+	}
+	pthread_mutex_unlock(&mutex);
+finalize_it:
+
+ENDreloadCnf
+
+static void
+instanceCleanup(void *arg)
+{
+	pthread_mutex_lock(&mutex);
+	DBGPRINTF("Started instance cleanup for inst=%p\n", arg);
+	instanceConf_t *inst = (instanceConf_t *) arg;
+	tcpsrv.Destruct(&inst->tcpsrv_etry->tcpsrv);
+	freeInstance(inst);
+	pthread_mutex_unlock(&mutex);
+}
 
 static void *
 RunServerThread(void *myself)
 {
-	tcpsrv_etry_t *const etry = (tcpsrv_etry_t*) myself;
-	rsRetVal iRet;
-	dbgprintf("RGER: running ety %p\n", etry);
-	iRet = tcpsrv.Run(etry->tcpsrv);
+	instanceConf_t *inst = (instanceConf_t *) myself;
+	dbgprintf("RGER: running inst=%p\n", inst);
+	pthread_cleanup_push(instanceCleanup, myself);
+	rsRetVal iRet = tcpsrv.Run(inst->tcpsrv_etry->tcpsrv);
 	if(iRet != RS_RET_OK) {
 		LogError(0, iRet, "imtcp: error while terminating server; rsyslog may hang on shutdown");
 	}
+	pthread_cleanup_pop(0);
 	return NULL;
 }
 
-
 /* support for running multiple servers on multiple threads (one server per thread) */
 static void
-startSrvWrkr(tcpsrv_etry_t *const etry)
+startSrvWrkr(instanceConf_t *inst)
 {
 	int r;
 	pthread_attr_t sessThrdAttr;
@@ -974,7 +1181,7 @@ startSrvWrkr(tcpsrv_etry_t *const etry)
 
 	pthread_attr_init(&sessThrdAttr);
 	pthread_attr_setstacksize(&sessThrdAttr, 4096*1024);
-	r = pthread_create(&etry->tid, &sessThrdAttr, RunServerThread, etry);
+	r = pthread_create(&inst->tcpsrv_etry->tid, &sessThrdAttr, RunServerThread, inst);
 	if(r != 0) {
 		LogError(errno, NO_ERRCODE, "imtcp error creating server thread");
 		/* we do NOT abort, as other servers may run - after all, we logged an error */
@@ -983,34 +1190,31 @@ startSrvWrkr(tcpsrv_etry_t *const etry)
 	pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
 }
 
-/* stop server worker thread
- */
-static void
-stopSrvWrkr(tcpsrv_etry_t *const etry)
-{
-	DBGPRINTF("Wait for thread shutdown etry %p\n", etry);
-	pthread_kill(etry->tid, SIGTTIN);
-	pthread_join(etry->tid, NULL);
-	DBGPRINTF("input %p terminated\n", etry);
-}
-
 /* This function is called to gather input.
  */
 BEGINrunInput
 CODESTARTrunInput
-	tcpsrv_etry_t *etry = tcpsrv_root->next;
-	while(etry != NULL) {
-		startSrvWrkr(etry);
-		etry = etry->next;
+	for (instanceConf_t *inst = runModConf->act; inst != NULL; inst = inst->next) {
+		inst->thrd = pThrd;
+		startSrvWrkr(inst);
 	}
 
-	iRet = tcpsrv.Run(tcpsrv_root->tcpsrv);
-
-	/* de-init remaining servers */
-	while(etry != NULL) {
-		stopSrvWrkr(etry);
-		etry = etry->next;
-	}
+	int found;
+	do {
+		pthread_mutex_lock(&mutex);
+		found = 0;
+		for (instanceConf_t *inst = runModConf->root; inst != NULL; inst = inst->next) {
+			if (inst->thrd != pThrd)
+				continue;
+			pthread_t tid = inst->tcpsrv_etry->tid;
+			found = 1;
+			pthread_mutex_unlock(&mutex);
+			pthread_join(tid, NULL);
+			break;
+		}
+		if (!found)
+			pthread_mutex_unlock(&mutex);
+	} while(found);
 ENDrunInput
 
 
@@ -1018,19 +1222,28 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	net.PrintAllowedSenders(2); /* TCP */
+	if (runModConf->act == NULL) /* no new listeners found in the configuration */
+		iRet = RS_RET_NO_LSTN_DEFINED;
+	else
+		iRet = RS_RET_OK;
 ENDwillRun
 
 
 BEGINafterRun
 CODESTARTafterRun
-	tcpsrv_etry_t *etry = tcpsrv_root;
-	while(etry != NULL) {
-		iRet = tcpsrv.Destruct(&etry->tcpsrv);
-		// TODO: check iRet, reprot error
-		etry = etry->next;
+	pthread_mutex_lock(&mutex);
+	instanceConf_t *del;
+	for (instanceConf_t *inst = runModConf->root; inst != NULL;) {
+		del = inst;
+		inst = inst->next;
+		if (del->thrd != pThrd)
+			continue;
+		unlinkInstance(runModConf, del);
+		tcpsrv.Destruct(&del->tcpsrv_etry->tcpsrv);
+		freeInstance(del);
 	}
-
 	net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
+	pthread_mutex_unlock(&mutex);
 ENDafterRun
 
 
@@ -1049,6 +1262,7 @@ CODESTARTmodExit
 	objRelease(tcps_sess, LM_TCPSRV_FILENAME);
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
 	objRelease(ruleset, CORE_COMPONENT);
+	pthread_mutex_destroy(&mutex);
 ENDmodExit
 
 
@@ -1084,6 +1298,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_reloadCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
@@ -1095,7 +1310,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	tcpsrv_root = NULL;
 	/* request objects we use */
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
@@ -1147,4 +1361,5 @@ CODEmodInit_QueryRegCFSLineHdlr
 			   NULL, &cs.lstnPortFile, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 				   resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	pthread_mutex_init(&mutex, NULL);
 ENDmodInit

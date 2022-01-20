@@ -1006,8 +1006,6 @@ glblPrepCnf(void)
 {
 	free(mainqCnfObj);
 	mainqCnfObj = NULL;
-	free(cnfparamvals);
-	cnfparamvals = NULL;
 }
 
 
@@ -1166,7 +1164,7 @@ glblProcessCnf(struct cnfobj *o)
 {
 	int i;
 
-	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, cnfparamvals);
+	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, NULL);
 	if(cnfparamvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing global "
 				"config parameters [global(...)]");
@@ -1323,7 +1321,7 @@ glblDoneLoadCnf(void)
 	displayTzinfos();
 
 	if(cnfparamvals == NULL)
-		goto finalize_it;
+		FINALIZE;
 
 	for(i = 0 ; i < paramblk.nParams ; ++i) {
 		if(!cnfparamvals[i].bUsed)
@@ -1540,7 +1538,10 @@ glblDoneLoadCnf(void)
 		stddbg = -1;
 	}
 
-finalize_it:	RETiRet;
+finalize_it:
+	if (cnfparamvals != NULL)
+		cnfparamvalsDestruct(cnfparamvals, &paramblk);
+	RETiRet;
 }
 
 

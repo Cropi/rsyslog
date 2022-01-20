@@ -109,6 +109,7 @@ struct tcpsrv_s {
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
+	int bTerminateInput;
 	int      (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void*pUsrSrv, void*pUsrSess);
 	rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t *, int*);
 	rsRetVal (*OpenLstnSocks)(struct tcpsrv_s*);
@@ -208,8 +209,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrCAFile)(tcpsrv_t *pThis, uchar *pszMode);
 	rsRetVal (*SetDrvrKeyFile)(tcpsrv_t *pThis, uchar *pszMode);
 	rsRetVal (*SetDrvrCertFile)(tcpsrv_t *pThis, uchar *pszMode);
+	/* added v26 -- Terminate a single input */
+	rsRetVal (*SetTerminateInput)(tcpsrv_t *pThis);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 25 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 26 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

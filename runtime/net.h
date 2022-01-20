@@ -167,8 +167,10 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*GetIFIPAddr)(uchar *szif, int family, uchar *pszbuf, int lenBuf);
 	/* v8 cvthname() signature change -- rgerhards, 2013-01-18 */
 	/* v9 create_udp_socket() signature change -- dsahern, 2016-11-11 */
+	int (*PermittedPeersEqual)(permittedPeers_t *pPeer1, permittedPeers_t *pPeer2);
+	/* v10 PermittedPeersEqual() check if 2 permitted peers are the same -- alakatos, 2022-01-16 */
 ENDinterface(net)
-#define netCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

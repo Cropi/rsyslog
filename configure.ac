@@ -780,6 +780,20 @@ if test "$enable_valgrind" = "yes"; then
         AC_DEFINE(VALGRIND, 1, [Defined if valgrind support settings are to be enabled (e.g. prevents dlclose()).])
 fi
 
+# compile with support for dynamic configuration reload
+AC_ARG_ENABLE(dynamic-config-reload,
+        [AS_HELP_STRING([--enable-dynamic-config-reload],[Enable dynamic config reload
+        @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_dynamic_config_reload="yes" ;;
+          no) enable_dynamic_config_reload="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-dynamic-config-reload) ;;
+         esac],
+        [enable_dynamic_config_reload=no]
+)
+if test "$enable_dynamic_config_reload" = "yes"; then
+  AC_DEFINE([ENABLE_DYNAMIC_CONFIG_RELOAD], [1], [Dynamic configuration reload enabled.])
+fi
 
 # compile diagnostic tools (small helpers usually not needed)
 AC_ARG_ENABLE(diagtools,
@@ -2778,6 +2792,7 @@ echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"
 echo "    libsystemd enabled:                       $enable_libsystemd"
 echo "    kafka static linking enabled:             $enable_kafka_static"
 echo "    atomic operations enabled:                $enable_atomic_operations"
+echo "    dynamic configuration enabled:            $enable_dynamic_config_reload"
 echo
 echo "---{ input plugins }---"
 if test "$unamestr" != "AIX"; then
