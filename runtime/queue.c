@@ -498,7 +498,7 @@ StartDA(qqueue_t *pThis)
 		pThis->cryprovNameFull = NULL;
 	}
 
-	iRet = qqueueStart(pThis->pqDA);
+	iRet = qqueueStart(runConf, pThis->pqDA);
 	/* file not found is expected, that means it is no previous QIF available */
 	if(iRet != RS_RET_OK && iRet != RS_RET_FILE_NOT_FOUND) {
 		errno = 0; /* else an errno is shown in errmsg! */
@@ -2323,7 +2323,7 @@ GetDeqBatchSize(qqueue_t *pThis, int *pVal)
  * before.
  */
 rsRetVal
-qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
+qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the ConstructionFinalizer */
 {
 	DEFiRet;
 	uchar pszBuf[64];
@@ -2341,7 +2341,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 		/* note: we need to pick the path so late as we do not have
 		 *       the workdir during early config load
 		 */
-		if((pThis->pszSpoolDir = (uchar*) strdup((char*)glbl.GetWorkDir(runConf))) == NULL)
+		if((pThis->pszSpoolDir = (uchar*) strdup((char*)glbl.GetWorkDir(cnf))) == NULL)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		pThis->lenSpoolDir = ustrlen(pThis->pszSpoolDir);
 	}
@@ -3478,6 +3478,44 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 	cnfparamvalsDestruct(pvals, &pblk);
 finalize_it:
 	RETiRet;
+}
+
+/* return 1 if the content of two qqueue_t structs equal */
+int
+queuesEqual(qqueue_t *pOld, qqueue_t *pNew)
+{
+	return (
+		NUM_EQUALS(qType) &&
+		NUM_EQUALS(iMaxQueueSize) &&
+		NUM_EQUALS(iDeqBatchSize) &&
+		NUM_EQUALS(iMinDeqBatchSize) &&
+		NUM_EQUALS(toMinDeqBatchSize) &&
+		NUM_EQUALS(sizeOnDiskMax) &&
+		NUM_EQUALS(iHighWtrMrk) &&
+		NUM_EQUALS(iLowWtrMrk) &&
+		NUM_EQUALS(iFullDlyMrk) &&
+		NUM_EQUALS(iLightDlyMrk) &&
+		NUM_EQUALS(iDiscardMrk) &&
+		NUM_EQUALS(iDiscardSeverity) &&
+		NUM_EQUALS(iPersistUpdCnt) &&
+		NUM_EQUALS(bSyncQueueFiles) &&
+		NUM_EQUALS(iNumWorkerThreads) &&
+		NUM_EQUALS(toQShutdown) &&
+		NUM_EQUALS(toActShutdown) &&
+		NUM_EQUALS(toEnq) &&
+		NUM_EQUALS(toWrkShutdown) &&
+		NUM_EQUALS(iMinMsgsPerWrkr) &&
+		NUM_EQUALS(iMaxFileSize) &&
+		NUM_EQUALS(bSaveOnShutdown) &&
+		NUM_EQUALS(iDeqSlowdown) &&
+		NUM_EQUALS(iDeqtWinFromHr) &&
+		NUM_EQUALS(iDeqtWinToHr) &&
+		NUM_EQUALS(iSmpInterval) &&
+		NUM_EQUALS(takeFlowCtlFromMsg) &&
+		USTR_EQUALS(pszFilePrefix) &&
+		USTR_EQUALS(cryprovName) &&
+		USTR_EQUALS(pszSpoolDir)
+	);
 }
 
 
