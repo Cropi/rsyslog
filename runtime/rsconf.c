@@ -250,6 +250,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.mainQ.bMainMsgQSaveOnShutdown = 1;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinFromHr = 0;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinToHr = 25;
+	pThis->pMsgQueue = NULL;
 
 	pThis->globals.parser.cCCEscapeChar = '#';
 	pThis->globals.parser.bDropTrailingLF = 1;
@@ -950,10 +951,21 @@ activateMainQueue(void)
 	mainqCnfObj = glbl.GetmainqCnfObj();
 	DBGPRINTF("activateMainQueue: mainq cnf obj ptr is %p\n", mainqCnfObj);
 	/* create message queue */
-	iRet = createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"),
+	iRet = createMainQueue(&loadConf->pMsgQueue, UCHAR_CONSTANT("main Q"),
 		    		(mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst);
 	if(iRet == RS_RET_OK) {
-		iRet = startMainQueue(pMsgQueue);
+		if (runConf == NULL) {
+			iRet = startMainQueue(loadConf, loadConf->pMsgQueue);
+		} else {
+			int areEqual = queuesEqual(loadConf->pMsgQueue, runConf->pMsgQueue);
+			DBGPRINTF("Comparison of old and new main queues: %d\n", areEqual);
+			if (areEqual) { /* content of the new mainQ is the same as it was in previous conf */
+				qqueueDestruct(&loadConf->pMsgQueue);
+				loadConf->pMsgQueue = runConf->pMsgQueue;
+			} else {
+				iRet = startMainQueue(loadConf, loadConf->pMsgQueue);
+			}
+		}
 	}
 	if(iRet != RS_RET_OK) {
 		/* no queue is fatal, we need to give up in that case... */
@@ -961,7 +973,7 @@ activateMainQueue(void)
 		FINALIZE;
 	}
 
-	if(runConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) { // ourConf -> runConf
+	if(loadConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) { // ourConf -> runConf
 		PREFER_STORE_0_TO_INT(&bHaveMainQueue);
 	} else {
 		PREFER_STORE_1_TO_INT(&bHaveMainQueue);
@@ -985,6 +997,20 @@ setUmask(int iUmask)
 	return RS_RET_OK;
 }
 
+/* Remove resources from previous config */
+static void
+cleanupDynCnf(rsconf_t *cnf)
+{
+	if (cnf == NULL)
+		FINALIZE;
+
+	if (runConf->pMsgQueue != cnf->pMsgQueue)
+		qqueueDestruct(&cnf->pMsgQueue);
+
+finalize_it:
+	return;
+}
+
 
 /* Activate an already-loaded configuration. The configuration will become
  * the new running conf (if successful). Note that in theory this method may
@@ -996,6 +1022,9 @@ static rsRetVal
 activate(rsconf_t *cnf)
 {
 	DEFiRet;
+	rsconf_t *oldCnf = runConf;
+
+	CHKiRet(activateMainQueue());
 
 	/* at this point, we "switch" over to the running conf */
 	runConf = cnf;
@@ -1025,12 +1054,12 @@ activate(rsconf_t *cnf)
 	startInputModules();
 	CHKiRet(activateActions());
 	CHKiRet(activateRulesetQueues());
-	CHKiRet(activateMainQueue());
 	/* finally let the inputs run... */
 	runInputModules();
 	qqueueDoneLoadCnf(); /* we no longer need config-load-only data structures */
 
 	dbgprintf("configuration %p activated\n", cnf);
+	cleanupDynCnf(oldCnf);
 
 finalize_it:
 	RETiRet;
