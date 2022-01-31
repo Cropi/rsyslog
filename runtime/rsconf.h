@@ -249,6 +249,7 @@ struct rsconf_s {
 	 * Of course, we need to debate if we shall change that some time...
 	 */
 	timezones_t timezones;
+	qqueue_t *pMsgQueue; /* the main message queue */
 };
 
 
