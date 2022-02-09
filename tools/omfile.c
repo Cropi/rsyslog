@@ -1526,6 +1526,47 @@ CODESTARTdoHUP
 	pthread_mutex_unlock(&pData->mutWrite);
 ENDdoHUP
 
+BEGINmodulesEqual
+CODESTARTmodulesEqual
+	return (
+		NUM_EQUALS(fDirCreateMode) &&
+		NUM_EQUALS(fCreateMode) &&
+		NUM_EQUALS(dirUID) &&
+		NUM_EQUALS(dirGID) &&
+		NUM_EQUALS(fileUID) &&
+		NUM_EQUALS(fileGID) &&
+		NUM_EQUALS(bDynafileDoNotSuspend)
+	);
+ENDmodulesEqual
+
+BEGINinstancesEqual
+CODESTARTinstancesEqual
+	return (
+		USTR_EQUALS(fname) &&
+		NUM_EQUALS(iDynaFileCacheSize) &&
+		NUM_EQUALS(iZipLevel) &&
+		NUM_EQUALS(iFlushInterval) &&
+		NUM_EQUALS(bVeryRobustZip) &&
+		NUM_EQUALS(bUseAsyncWriter) &&
+		NUM_EQUALS(bFlushOnTXEnd) &&
+		NUM_EQUALS(iIOBufSize) &&
+		NUM_EQUALS(dirUID) &&
+		NUM_EQUALS(dirGID) &&
+		NUM_EQUALS(fileUID) &&
+		NUM_EQUALS(fileGID) &&
+		NUM_EQUALS(fDirCreateMode) &&
+		NUM_EQUALS(fCreateMode) &&
+		NUM_EQUALS(bFailOnChown) &&
+		NUM_EQUALS(bSyncFile) &&
+		NUM_EQUALS(bCreateDirs) &&
+		NUM_EQUALS(bDynamicName) &&
+		NUM_EQUALS(iCloseTimeout) &&
+		USTR_EQUALS(tplName) &&
+		USTR_EQUALS(sigprovName) &&
+		USTR_EQUALS(cryprovName)
+	);
+ENDinstancesEqual
+
 
 BEGINmodExit
 CODESTARTmodExit
@@ -1543,6 +1584,7 @@ CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_doHUP
+CODEqueryEtryPt_STD_CONF2_confsEqual_QUERIES
 ENDqueryEtryPt
 
 
