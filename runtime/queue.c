@@ -3527,8 +3527,8 @@ queuesEqual(qqueue_t *pOld, qqueue_t *pNew)
 		NUM_EQUALS(iSmpInterval) &&
 		NUM_EQUALS(takeFlowCtlFromMsg) &&
 		USTR_EQUALS(pszFilePrefix) &&
-		USTR_EQUALS(cryprovName) &&
-		USTR_EQUALS(pszSpoolDir)
+		USTR_EQUALS(cryprovName)/* &&
+		USTR_EQUALS(pszSpoolDir)*/
 	);
 }
 

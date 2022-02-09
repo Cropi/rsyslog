@@ -127,6 +127,8 @@ struct modInfo_s {
 	rsRetVal (*freeCnf)(void*Cnf);
 	/* end v2 config system specific */
 	rsRetVal (*reloadCnf)(void); /* calculate difference between loaded and running conf */
+	rsRetVal (*instancesEqual)(void*, void*); /* compare two instances */
+	rsRetVal (*modulesEqual)(void*, void*); /* compare two instances */
 	union	{
 		struct {/* data for input modules */
 /* TODO: remove? */rsRetVal (*willRun)(void); 		/* check if the current config will be able to run*/
@@ -188,8 +190,9 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Load)(uchar *name, sbool bConfLoad, struct nvlst *lst);
 	rsRetVal (*SetModDir)(uchar *name);
 	modInfo_t *(*FindWithCnfName)(rsconf_t *cnf, uchar *name, eModType_t rqtdType); /* added v3, 2011-07-19 */
+	cfgmodules_etry_t *(*FindCfgEtryWithCnfName)(rsconf_t *cnf, uchar *name, eModType_t type);
 ENDinterface(module)
-#define moduleCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
+#define moduleCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
 /* Changes:
  * v2
  * - added param bCondLoad to Load call - 2011-04-27

@@ -234,6 +234,27 @@ finalize_it:
 	RETiRet;
 }
 
+/* append a user element to the beginning of the linked list. This includes setting a key. If no
+ * key is desired, simply pass in a NULL pointer for it.
+ */
+rsRetVal llPrepend(linkedList_t *pThis, void *pKey, void *pData)
+{
+	llElt_t *pElt;
+	DEFiRet;
+
+	CHKiRet(llEltConstruct(&pElt, pKey, pData));
+
+	pThis->iNumElts++; /* one more */
+	if (pThis->pRoot == NULL) {
+		pThis->pLast = pElt;
+	}
+	pElt->pNext = pThis->pRoot;
+	pThis->pRoot = pElt;
+
+finalize_it:
+	RETiRet;
+}
+
 
 /* unlink a requested element. As we have singly-linked lists, the
  * caller also needs to pass in the previous element (or NULL, if it is the

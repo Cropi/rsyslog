@@ -57,6 +57,7 @@
 #include "errmsg.h"
 #include "parser.h"
 #include "strgen.h"
+#include "unicode-helper.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -522,6 +523,20 @@ FindWithCnfName(rsconf_t *cnf, uchar *name, eModType_t rqtdType)
 	return node == NULL ? NULL : node->pMod;
 }
 
+static cfgmodules_etry_t *
+FindCfgEtryWithCnfName(rsconf_t *cnf, uchar *name, eModType_t type)
+{
+	cfgmodules_etry_t *node;
+
+	node = GetNxtCnfType(cnf, NULL, type);
+	while(node != NULL) {
+		if (ustrcmp(node->pMod->pszName, name) == 0)
+			return node;
+		node = GetNxtCnfType(cnf, node, type);
+	}
+
+	return NULL;
+}
 
 /* Prepare a module for unloading.
  * This is currently a dummy, to be filled when we have a plug-in
@@ -633,6 +648,8 @@ doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modInfo_t **pNewModul
 			pNew->cnfName = NULL;
 		dbgprintf("module config name is '%s'\n", cnfName);
 	}
+	(*pNew->modQueryEtryPt)((uchar*)"instancesEqual", &pNew->instancesEqual);
+	(*pNew->modQueryEtryPt)((uchar*)"modulesEqual", &pNew->modulesEqual);
 	localRet = (*pNew->modQueryEtryPt)((uchar*)"beginCnfLoad", &pNew->beginCnfLoad);
 	if(localRet == RS_RET_OK) {
 		dbgprintf("module %s supports rsyslog v6 config interface\n", name);
@@ -1461,6 +1478,7 @@ CODESTARTobjQueryInterface(module)
 	pIf->GetStateName = modGetStateName;
 	pIf->PrintList = modPrintList;
 	pIf->FindWithCnfName = FindWithCnfName;
+	pIf->FindCfgEtryWithCnfName = FindCfgEtryWithCnfName;
 	pIf->UnloadAndDestructAll = modUnloadAndDestructAll;
 	pIf->doModInit = doModInit;
 	pIf->SetModDir = SetModDir;
