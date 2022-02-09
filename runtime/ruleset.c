@@ -49,6 +49,7 @@
 #include "srUtils.h"
 #include "modules.h"
 #include "wti.h"
+#include "grammar.h"
 #include "dirty.h" /* for main ruleset queue creation */
 
 
@@ -635,6 +636,363 @@ finalize_it:
 	RETiRet;
 }
 
+static int
+actionsEqual(struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
+{
+	action_t *const pOld = pOldStmt->d.act;
+	action_t *const pNew = pNewStmt->d.act;
+	return (
+		NUM_EQUALS(pMod->eType) &&
+		USTR_EQUALS(pszName) &&
+		USTR_EQUALS(pszErrFile) &&
+		USTR_EQUALS(pszExternalStateFile) &&
+		NUM_EQUALS(bWriteAllMarkMsgs) &&
+		NUM_EQUALS(iExecEveryNthOccur) &&
+		NUM_EQUALS(iExecEveryNthOccurTO) &&
+		NUM_EQUALS(iSecsExecOnceInterval) &&
+		NUM_EQUALS(bExecWhenPrevSusp) &&
+		NUM_EQUALS(bRepMsgHasMsg) &&
+		NUM_EQUALS(iResumeRetryCount) &&
+		NUM_EQUALS(bReportSuspension) &&
+		NUM_EQUALS(bReportSuspensionCont) &&
+		NUM_EQUALS(bCopyMsg) &&
+		NUM_EQUALS(iResumeInterval) &&
+		NUM_EQUALS(iResumeIntervalMax)
+	);
+}
+
+static int
+msgPropDescrtEquals(msgPropDescr_t pOld, msgPropDescr_t pNew)
+{
+	// TODO
+	return (
+		1//pOld.id == pNew.id
+	);
+}
+
+static int
+cnfExprsEqual(struct cnfexpr *pOld, struct cnfexpr *pNew)
+{
+	int equal = 1;
+	struct cnfarray *pOldArr, *pNewArr;
+	struct cnffunc *pOldFunc, *pNewFunc;
+	struct cnfvar *pOldVar, *pNewVar;
+	struct cnffparamlst *pOldParamlst, *pNewParamlst;
+	struct cnffuncexists *pOldFuncExists, *pNewFuncExists;
+
+	DBGPRINTF("cnfExprsEqual type '%u' vs type '%u'\n",
+		pOld->nodetype, pNew->nodetype);
+
+	if (pOld->nodetype != pNew->nodetype)
+		return 0;
+
+	switch (pOld->nodetype) {
+	case 'A':
+		pOldArr = (struct cnfarray *)pOld;
+		pNewArr = (struct cnfarray *)pNew;
+		if (pOldArr->nmemb != pNewArr->nmemb)
+			return 0;
+		for (int i = 0; i < pOldArr->nmemb; i++) {
+			if (es_strcmp(pOldArr->arr[i], pNewArr->arr[i]) != 0) {
+				return 0;
+			}
+		}
+		break;
+	case 'F':
+		pOldFunc = (struct cnffunc *)pOld;
+		pNewFunc = (struct cnffunc *)pNew;
+		equal &= (es_strcmp(pOldFunc->fname, pNewFunc->fname) == 0);
+		equal &= (pOldFunc->nParams == pNewFunc->nParams);
+		if (!equal)
+			return 0;
+		for (unsigned short i = 0; i < pOldFunc->nParams; i++) {
+			equal &= cnfExprsEqual(pOldFunc->expr[i], pNewFunc->expr[i]);
+		}
+		break;
+
+	case 'N':
+		equal &= (((struct cnfnumval *)pOld)->val == ((struct cnfnumval *)pNew)->val);
+		break;
+
+	case 'P':
+		pOldParamlst = (struct cnffparamlst *)pOld;
+		pNewParamlst = (struct cnffparamlst *)pNew;
+		while (pOldParamlst != NULL && pNewParamlst != NULL) {
+			equal &= cnfExprsEqual(pOldParamlst->expr, pNewParamlst->expr);
+			pOldParamlst = pOldParamlst->next;
+			pNewParamlst = pNewParamlst->next;
+		}
+		equal &= (pOldParamlst == pNewParamlst);
+		break;
+
+	case 'S':
+		equal &= (!es_strcmp(((struct cnfstringval *)pOld)->estr, ((struct cnfstringval *)pNew)->estr));
+		break;
+
+	case 'V':
+		pOldVar = (struct cnfvar *)pOld;
+		pNewVar = (struct cnfvar *)pNew;
+		equal &= (!strcmp(pOldVar->name, pNewVar->name));
+		equal &= msgPropDescrtEquals(pOldVar->prop, pNewVar->prop);
+		break;
+
+	case S_FUNC_EXISTS:
+		pOldFuncExists = (struct cnffuncexists *)pOld;
+		pNewFuncExists = (struct cnffuncexists *)pNew;
+		equal &= (!strcmp(pOldFuncExists->varname, pNewFuncExists->varname));
+		equal &= msgPropDescrtEquals(pOldFuncExists->prop, pNewFuncExists->prop);
+		break;
+
+	case CMP_NE:
+	case CMP_EQ:
+	case CMP_LE:
+	case CMP_GE:
+	case CMP_LT:
+	case CMP_GT:
+	case CMP_STARTSWITH:
+	case CMP_STARTSWITHI:
+	case CMP_CONTAINS:
+	case CMP_CONTAINSI:
+	case OR:
+	case AND:
+	case '&':
+	case '+':
+	case '-':
+	case '*':
+	case '/':
+	case '%': /* binary */
+		equal &= cnfExprsEqual(pOld->l, pNew->l);
+		equal &= cnfExprsEqual(pOld->r, pNew->r);
+		break;
+	case NOT:
+	case 'M': /* unary */
+		equal &= cnfExprsEqual(pOld->r, pNew->r);
+		break;
+	default:
+		break;
+	}
+
+	return equal;
+}
+
+static int
+setsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+{
+	return (
+		!ustrcmp(pOldStmt->d.s_set.varname, pNewStmt->d.s_set.varname) &&
+		pOldStmt->d.s_set.force_reset == pNewStmt->d.s_set.force_reset &&
+		cnfExprsEqual(pOldStmt->d.s_set.expr, pNewStmt->d.s_set.expr)
+	);
+}
+
+static int
+unsetsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+{
+	return (
+		!ustrcmp(pOldStmt->d.s_set.varname, pNewStmt->d.s_set.varname)
+	);
+}
+
+static int
+indirectCallsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+{
+	return (
+		cnfExprsEqual(pOldStmt->d.s_call_ind.expr, pNewStmt->d.s_call_ind.expr)
+	);
+}
+
+static int
+callsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+{
+	return (
+		!es_strcmp(pOldStmt->d.s_call.name , pNewStmt->d.s_call.name) &&
+		cnfStmtsEqual(pOldStmt->d.s_call.stmt, pNewStmt->d.s_call.stmt) &&
+		1 /* TODO compare rulesets */
+	);
+}
+
+static int
+ifsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+{
+	return (
+		cnfExprsEqual(pOldStmt->d.s_if.expr, pNewStmt->d.s_if.expr) &&
+		cnfStmtsEqual(pOldStmt->d.s_if.t_then, pNewStmt->d.s_if.t_then) &&
+		cnfStmtsEqual(pOldStmt->d.s_if.t_else, pNewStmt->d.s_if.t_else)
+	);
+}
+
+static int
+cnfItrEqual(struct cnfitr *pOld, struct cnfitr *pNew)
+{
+	return (
+		!strcmp(pOld->var, pNew->var) &&
+		cnfExprsEqual(pOld->collection, pNew->collection)
+	);
+}
+
+static int
+foreachesEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+{
+	return (
+		cnfItrEqual(pOldStmt->d.s_foreach.iter, pNewStmt->d.s_foreach.iter) &&
+		cnfStmtsEqual(pOldStmt->d.s_foreach.body, pNewStmt->d.s_foreach.body)
+	);
+}
+
+static int
+prifiltsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+{
+	return (
+		memcmp(pOldStmt->d.s_prifilt.pmask, pNewStmt->d.s_prifilt.pmask, LOG_NFACILITIES+1) == 0 &&
+		cnfStmtsEqual(pOldStmt->d.s_prifilt.t_then, pNewStmt->d.s_prifilt.t_then) &&
+		cnfStmtsEqual(pOldStmt->d.s_prifilt.t_else, pNewStmt->d.s_prifilt.t_else)
+	);
+}
+
+static int
+propfiltsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+{
+	return (
+		pOldStmt->d.s_propfilt.operation == pNewStmt->d.s_propfilt.operation &&
+		!ustrcmp(cstrGetSzStrNoNULL(pOldStmt->d.s_propfilt.pCSCompValue),
+			cstrGetSzStrNoNULL(pNewStmt->d.s_propfilt.pCSCompValue)) &&
+		pOldStmt->d.s_propfilt.isNegated == pNewStmt->d.s_propfilt.isNegated &&
+		msgPropDescrtEquals(pOldStmt->d.s_propfilt.prop, pNewStmt->d.s_propfilt.prop) &&
+		cnfStmtsEqual(pOldStmt->d.s_propfilt.t_then, pNewStmt->d.s_propfilt.t_then) &&
+		cnfStmtsEqual(pOldStmt->d.s_propfilt.t_else, pNewStmt->d.s_propfilt.t_else)
+	);
+}
+
+static int
+reloadLookupTablesEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+{
+	return (
+		!ustrcmp(pOldStmt->d.s_reload_lookup_table.stub_value,
+			pNewStmt->d.s_reload_lookup_table.stub_value) &&
+		!ustrcmp(pOldStmt->d.s_reload_lookup_table.table_name,
+			pNewStmt->d.s_reload_lookup_table.table_name)
+		// TODO
+		// lookupRefsEqual(pOldStmt->d.s_reload_lookup_table.table,
+		// 	pNewStmt->d.s_reload_lookup_table.table)
+	);
+}
+
+rsRetVal
+reloadRulesets(rsconf_t *pOld, rsconf_t *pNew)
+{
+	DEFiRet;
+	linkedListCookie_t llOldRuleset = NULL, llNewRuleset = NULL;
+	linkedListCookie_t llOldRulesetPrev = NULL, llNewRulesetPrev = NULL;
+	ruleset_t *pOldRuleset, *pNewRuleset;
+
+	if (runConf == NULL)
+		FINALIZE;
+
+	/* Remove rulesets which are not part of the new config */
+	while((iRet = llGetNextElt(&pOld->rulesets.llRulesets, &llOldRuleset, (void*)&pOldRuleset)) == RS_RET_OK) {
+
+		while((iRet = llGetNextElt(&pNew->rulesets.llRulesets, &llNewRuleset, (void*)&pNewRuleset)) == RS_RET_OK) {
+
+			if (rulesetsEqual(pOldRuleset, pNewRuleset)) {
+				DBGPRINTF("Rulesets %p and %p have the same content\n", pOldRuleset, pNewRuleset);
+				// llOldRuleset->pNext = pNew->rulesets.llRulesets.pRoot;
+				// if (pNew->rulesets.llRulesets.pRoot == NULL) {
+				// 	pNew->rulesets.llRulesets.pRoot = pNew->rulesets.llRulesets.pLast = llOldRuleset;
+				// } else {
+				// 	pNew->rulesets.llRulesets.pRoot = llOldRuleset;
+				// }
+
+				// CHKiRet(llAppend(&(conf->rulesets.llRulesets), keyName, pThis));
+			} else {
+				DBGPRINTF("Rulesets %p and %p DO NOT have the same content\n", pOldRuleset, pNewRuleset);
+			}
+			llNewRulesetPrev = llNewRuleset;
+		}
+		llOldRulesetPrev = llOldRuleset;
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+int
+rulesetsEqual(ruleset_t *pOld, ruleset_t *pNew)
+{
+	int equal = 1;
+	struct cnfstmt *pOldStmt = pOld->root;
+	struct cnfstmt *pNewStmt = pNew->root;
+
+	equal &= USTR_EQUALS(pszName);
+	// TODO compare queues - separate PR
+	// TODO compare parser list - separate PR
+	while (pOldStmt != NULL && pNewStmt != NULL) {
+		equal &= cnfStmtsEqual(pOldStmt, pNewStmt);
+		pOldStmt = pOldStmt->next;
+		pNewStmt = pNewStmt->next;
+	}
+	equal &= (pOldStmt == pNewStmt);
+
+	return equal;
+}
+
+int
+cnfStmtsEqual(struct cnfstmt *pOld, struct cnfstmt *pNew)
+{
+	int equal = 1;
+
+	while (pOld != NULL && pNew != NULL) {
+
+		if(Debug) {
+			cnfstmtPrintOnly(pOld, 2, 0);
+			cnfstmtPrintOnly(pNew, 2, 0);
+		}
+		if (pOld->nodetype != pNew->nodetype)
+			return 0;
+		switch(pOld->nodetype) {
+		case S_NOP:
+		case S_STOP:
+			break;
+		case S_ACT:
+			equal &= actionsEqual(pOld, pNew);
+			break;
+		case S_SET:
+			equal &= setsEqual(pOld, pNew);
+			break;
+		case S_UNSET:
+			equal &= unsetsEqual(pOld, pNew);
+			break;
+		case S_CALL:
+			equal &= callsEqual(pOld, pNew);
+			break;
+		case S_CALL_INDIRECT:
+			equal &= indirectCallsEqual(pOld, pNew);
+			break;
+		case S_IF:
+			equal &= ifsEqual(pOld, pNew);
+			break;
+		case S_FOREACH:
+			equal &= foreachesEqual(pOld, pNew);
+			break;
+		case S_PRIFILT:
+			equal &= prifiltsEqual(pOld, pNew);
+			break;
+		case S_PROPFILT:
+			equal &= propfiltsEqual(pOld, pNew);
+			break;
+		case S_RELOAD_LOOKUP_TABLE:
+			equal &= reloadLookupTablesEqual(pOld, pNew);
+			break;
+		default:
+			dbgprintf("error: unknown stmt type %u during exec\n",
+				(unsigned) pOld->nodetype);
+			break;
+		}
+		pOld = pOld->next;
+		pNew = pNew->next;
+	}
+	equal &= (pOld == pNew);
+	return equal;
+}
 
 /* Process (consume) a batch of messages. Calls the actions configured.
  * This is called by MAIN queues.

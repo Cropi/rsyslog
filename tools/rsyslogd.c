@@ -1750,6 +1750,7 @@ static void
 doDynamicCnfReload(void)
 {
 	DEFiRet;
+	iActionNbr = 0;
 	resetErrMsgsFlag();
 	// glblPrepCnf();
 	iRet = rsconf.Load(&ourConf, ConfFile);

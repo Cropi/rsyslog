@@ -1025,6 +1025,7 @@ activate(rsconf_t *cnf)
 	rsconf_t *oldCnf = runConf;
 
 	CHKiRet(activateMainQueue());
+	reloadRulesets(loadConf, runConf);
 
 	/* at this point, we "switch" over to the running conf */
 	runConf = cnf;
