@@ -641,7 +641,15 @@ actionsEqual(struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
 {
 	action_t *const pOld = pOldStmt->d.act;
 	action_t *const pNew = pNewStmt->d.act;
+	int asp; /* action specific parameters equal */
+
+	asp =
+		NUM_EQUALS(pMod->eType) && /* both actions have same type */
+		pOld->pMod->instancesEqual != NULL &&  /* compare function is available */
+		pOld->pMod->instancesEqual(pOld->pModData, pNew->pModData); /* and they do equal */
+
 	return (
+		asp &&
 		NUM_EQUALS(pMod->eType) &&
 		USTR_EQUALS(pszName) &&
 		USTR_EQUALS(pszErrFile) &&
@@ -662,7 +670,7 @@ actionsEqual(struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
 }
 
 static int
-msgPropDescrtEquals(msgPropDescr_t pOld, msgPropDescr_t pNew)
+msgPropDescrtEquals(msgPropDescr_t __attribute__((unused)) pOld, msgPropDescr_t __attribute__((unused)) pNew)
 {
 	// TODO
 	return (
@@ -881,34 +889,31 @@ rsRetVal
 reloadRulesets(rsconf_t *pOld, rsconf_t *pNew)
 {
 	DEFiRet;
-	linkedListCookie_t llOldRuleset = NULL, llNewRuleset = NULL;
-	linkedListCookie_t llOldRulesetPrev = NULL, llNewRulesetPrev = NULL;
-	ruleset_t *pOldRuleset, *pNewRuleset;
+	linkedListCookie_t llOldRuleset;
+	linkedListCookie_t llNewRulesetNext;
+	ruleset_t *pOldRuleset, *pNewRuleset, *pNewRulesetNext;
 
 	if (runConf == NULL)
 		FINALIZE;
 
-	/* Remove rulesets which are not part of the new config */
+	/* Relocate rulesets which are  part of the new config */
+	llOldRuleset = NULL;
 	while((iRet = llGetNextElt(&pOld->rulesets.llRulesets, &llOldRuleset, (void*)&pOldRuleset)) == RS_RET_OK) {
 
-		while((iRet = llGetNextElt(&pNew->rulesets.llRulesets, &llNewRuleset, (void*)&pNewRuleset)) == RS_RET_OK) {
+		llNewRulesetNext = NULL;
+		llGetNextElt(&pNew->rulesets.llRulesets, &llNewRulesetNext, (void*)&pNewRulesetNext);
+		do {
+			pNewRuleset = pNewRulesetNext;
+			iRet = llGetNextElt(&pNew->rulesets.llRulesets, &llNewRulesetNext, (void*)&pNewRulesetNext);
 
+			int equals = rulesetsEqual(pOldRuleset, pNewRuleset);
+			DBGPRINTF("Rulesets %p and %p do %shave the same content\n", pOldRuleset, pNewRuleset,
+				equals ? "" : "NOT ");
 			if (rulesetsEqual(pOldRuleset, pNewRuleset)) {
-				DBGPRINTF("Rulesets %p and %p have the same content\n", pOldRuleset, pNewRuleset);
-				// llOldRuleset->pNext = pNew->rulesets.llRulesets.pRoot;
-				// if (pNew->rulesets.llRulesets.pRoot == NULL) {
-				// 	pNew->rulesets.llRulesets.pRoot = pNew->rulesets.llRulesets.pLast = llOldRuleset;
-				// } else {
-				// 	pNew->rulesets.llRulesets.pRoot = llOldRuleset;
-				// }
-
-				// CHKiRet(llAppend(&(conf->rulesets.llRulesets), keyName, pThis));
-			} else {
-				DBGPRINTF("Rulesets %p and %p DO NOT have the same content\n", pOldRuleset, pNewRuleset);
+				llFindAndDelete(&pNew->rulesets.llRulesets, pNewRuleset->pszName);
+				llPrepend(&pNew->rulesets.llRulesets, pOldRuleset->pszName, pOldRuleset);
 			}
-			llNewRulesetPrev = llNewRuleset;
-		}
-		llOldRulesetPrev = llOldRuleset;
+		} while (iRet == RS_RET_OK);
 	}
 
 finalize_it:

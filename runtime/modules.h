@@ -127,6 +127,7 @@ struct modInfo_s {
 	rsRetVal (*freeCnf)(void*Cnf);
 	/* end v2 config system specific */
 	rsRetVal (*reloadCnf)(void); /* calculate difference between loaded and running conf */
+	rsRetVal (*instancesEqual)(void*, void*); /* compare two instances */
 	union	{
 		struct {/* data for input modules */
 /* TODO: remove? */rsRetVal (*willRun)(void); 		/* check if the current config will be able to run*/

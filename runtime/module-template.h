@@ -663,8 +663,13 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * dynamic config reload
  */
 #define CODEqueryEtryPt_STD_CONF2_reloadCnf_QUERIES \
-	  else if(!strcmp((char*) name, "reloadCnf")) {\
+	else if(!strcmp((char*) name, "reloadCnf")) {\
 		*pEtryPoint = reloadCnf;\
+	}
+
+#define CODEqueryEtryPt_STD_CONF2_instancesEqual_QUERIES \
+	else if(!strcmp((char*) name, "instancesEqual")) {\
+		*pEtryPoint = instancesEqual;\
 	}
 
 /* the following block is to be added for modules that support v2
@@ -1039,6 +1044,20 @@ static rsRetVal reloadCnf(void)\
 #define CODESTARTreloadCnf
 
 #define ENDreloadCnf \
+	RETiRet;\
+}
+
+/* instancesEqual()
+ * This is a function return nonzero if two instances of the same type
+ * equal in content
+ */
+#define BEGINinstancesEqual \
+static rsRetVal instancesEqual(void *ptrOld, void *ptrNew)\
+{\
+	DEFiRet;
+#define CODESTARTinstancesEqual
+
+#define ENDinstancesEqual \
 	RETiRet;\
 }
 

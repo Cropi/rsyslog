@@ -633,6 +633,7 @@ doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modInfo_t **pNewModul
 			pNew->cnfName = NULL;
 		dbgprintf("module config name is '%s'\n", cnfName);
 	}
+	(*pNew->modQueryEtryPt)((uchar*)"instancesEqual", &pNew->instancesEqual);
 	localRet = (*pNew->modQueryEtryPt)((uchar*)"beginCnfLoad", &pNew->beginCnfLoad);
 	if(localRet == RS_RET_OK) {
 		dbgprintf("module %s supports rsyslog v6 config interface\n", name);

@@ -167,6 +167,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
 	pThis->actions.nbrActions = 0;
+	pThis->actions.iActionNbr = 0;
 	pThis->globals.pszWorkDir = NULL;
 	pThis->globals.bDropMalPTRMsgs = 0;
 	pThis->globals.operatingStateFile = NULL;
@@ -1025,7 +1026,7 @@ activate(rsconf_t *cnf)
 	rsconf_t *oldCnf = runConf;
 
 	CHKiRet(activateMainQueue());
-	reloadRulesets(loadConf, runConf);
+	reloadRulesets(runConf, loadConf);
 
 	/* at this point, we "switch" over to the running conf */
 	runConf = cnf;
@@ -1530,7 +1531,7 @@ load(rsconf_t **cnf, uchar *confFile)
 		ABORT_FINALIZE(RS_RET_NO_ACTIONS);
 	}
 	tellLexEndParsing();
-	DBGPRINTF("Number of actions in this configuration: %d\n", iActionNbr);
+	DBGPRINTF("Number of actions in this configuration: %d\n", loadConf->actions.iActionNbr);
 
 	CHKiRet(tellCoreConfigLoadDone());
 	tellModulesConfigLoadDone();

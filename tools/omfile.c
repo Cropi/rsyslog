@@ -1526,6 +1526,16 @@ CODESTARTdoHUP
 	pthread_mutex_unlock(&pData->mutWrite);
 ENDdoHUP
 
+BEGINinstancesEqual
+	instanceData *pOld = (instanceData *)ptrOld;
+	instanceData *pNew = (instanceData *)ptrNew;
+CODESTARTinstancesEqual
+	// DBGPRINTF("fname=%s %s\n", pOld->fname, pNew->fname);
+	return (
+		USTR_EQUALS(fname)
+	);
+ENDinstancesEqual
+
 
 BEGINmodExit
 CODESTARTmodExit
@@ -1543,6 +1553,7 @@ CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_doHUP
+CODEqueryEtryPt_STD_CONF2_instancesEqual_QUERIES
 ENDqueryEtryPt
 
 
