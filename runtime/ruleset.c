@@ -960,7 +960,7 @@ rulesetsEqual(ruleset_t *pOld, ruleset_t *pNew)
 
 	equal &= USTR_EQUALS(pszName);
 	equal &= (pOld->pQueue == NULL) ? (pNew->pQueue == NULL) : queuesEqual(pOld->pQueue, pNew->pQueue);
-	// TODO compare parser list - separate PR
+	equal &= parserListsEqual(pOld->pParserLst, pNew->pParserLst);
 	while (pOldStmt != NULL && pNewStmt != NULL) {
 		equal &= cnfStmtsEqual(pOldStmt, pNewStmt);
 		pOldStmt = pOldStmt->next;

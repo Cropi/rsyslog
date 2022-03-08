@@ -3498,6 +3498,8 @@ finalize_it:
 int
 queuesEqual(qqueue_t *pOld, qqueue_t *pNew)
 {
+	if (pOld == NULL || pNew == NULL)
+		return pOld == pNew;
 	return (
 		NUM_EQUALS(qType) &&
 		NUM_EQUALS(iMaxQueueSize) &&

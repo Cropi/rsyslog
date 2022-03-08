@@ -391,11 +391,32 @@ CODESTARTmodExit
 	objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
+BEGINmodulesEqual
+	(void)ptrOld;
+	(void)ptrNew;
+CODESTARTmodulesEqual
+ENDmodulesEqual
+
+BEGINinstancesEqual
+	instanceConf_t *pOld = (instanceConf_t *)ptrOld;
+	instanceConf_t *pNew = (instanceConf_t *)ptrNew;
+CODESTARTinstancesEqual
+	return (
+		NUM_EQUALS(bDetectYearAfterTimestamp) &&
+		NUM_EQUALS(bPermitSquareBracketsInHostname) &&
+		NUM_EQUALS(bPermitSlashesInHostname) &&
+		NUM_EQUALS(bPermitAtSignsInHostname) &&
+		NUM_EQUALS(bForceTagEndingByColon) &&
+		NUM_EQUALS(bRemoveMsgFirstSpace)
+	);
+ENDinstancesEqual
+
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_PMOD2_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_confsEqual_QUERIES
 ENDqueryEtryPt
 
 

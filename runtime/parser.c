@@ -739,6 +739,33 @@ destroyMasterParserList(void)
 	}
 }
 
+static int
+parsersEqual(parser_t *pOld, parser_t *pNew)
+{
+	int equal = 1;
+
+	equal &= USTR_EQUALS(pModule->pszName);
+	equal &= USTR_EQUALS(pName);
+	if (equal)
+		equal &= (pOld->pModule->instancesEqual && pOld->pModule->instancesEqual(pOld->pInst, pNew->pInst));
+
+	return equal;
+}
+
+int
+parserListsEqual(parserList_t *pOld, parserList_t *pNew)
+{
+	int equal = 1;
+
+	while (pOld != NULL && pNew != NULL) {
+		equal &= parsersEqual(pOld->pParser, pNew->pParser);
+		pOld = pOld->pNext;
+		pNew = pNew->pNext;
+	}
+	equal &= (pOld == pNew);
+	return equal;
+}
+
 /* Exit our class.
  * rgerhards, 2009-11-04
  */

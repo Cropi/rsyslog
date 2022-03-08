@@ -65,6 +65,7 @@ ENDinterface(parser)
 */
 
 void printParserList(parserList_t *pList);
+int parserListsEqual(parserList_t *pOld, parserList_t *pNew);
 
 /* prototypes */
 PROTOTYPEObj(parser);
