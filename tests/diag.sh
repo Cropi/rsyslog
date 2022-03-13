@@ -1,5 +1,5 @@
 #!/bin/bash
-# 
+#
 # this shell script provides commands to the common diag system. It enables
 # test scripts to wait for certain conditions and initiate certain actions.
 # needs support in config file.
@@ -189,7 +189,7 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 
 
 # begin a new testconfig
-#	2018-09-07:	Incremented inputs.timeout.shutdown to 60000 because kafka tests may not be 
+#	2018-09-07:	Incremented inputs.timeout.shutdown to 60000 because kafka tests may not be
 #			finished under stress otherwise
 # $1 is the instance id, if given
 generate_conf() {
@@ -234,6 +234,9 @@ add_conf() {
 	printf '%s' "$1" >> ${TESTCONF_NM}$2.conf
 }
 
+rewrite_conf() {
+	printf '%s' "$1" > ${TESTCONF_NM}$2.conf
+}
 
 rst_msleep() {
 	$TESTTOOL_DIR/msleep $1
@@ -529,6 +532,19 @@ startup() {
 	reassign_ports
 }
 
+reloadConfig() {
+	instance=
+	if [ "$1" == "2" ]; then
+	    instance=2
+	elif [ "$1" == "" ] || [ "$1" == "1" ]; then
+	    instance=""
+	else
+	    instance=$1
+	fi
+
+	echo "Will send HUP to `cat $RSYSLOG_PIDBASE$instance.pid`"
+	kill -HUP `cat $RSYSLOG_PIDBASE$instance.pid`
+}
 
 # assign TCPFLOOD_PORT from port file
 # $1 - port file
@@ -1312,7 +1328,7 @@ error_exit() {
 		dump_kafka_serverlog
 	fi
 
-	# Extended Exit handling for kafka / zookeeper instances 
+	# Extended Exit handling for kafka / zookeeper instances
 	kafka_exit_handling "false"
 
 	error_stats $1 # Report error to rsyslog testbench stats
@@ -1425,7 +1441,7 @@ seq_check() {
 		# for interactive testing, create a static filename. We know this may get
 		# mangled during a parallel test run
 		mv -f $RSYSLOG_DYNNAME.error.log error.log
-		error_exit 1 
+		error_exit 1
 	fi
 	return 0
 }
@@ -1524,7 +1540,7 @@ exit_test() {
 	rm -fr $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS
 
-	# Extended Exit handling for kafka / zookeeper instances 
+	# Extended Exit handling for kafka / zookeeper instances
 	kafka_exit_handling "true"
 
 	printf '%s Test %s SUCCESSFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
@@ -1654,9 +1670,9 @@ dep_work_dir=$(pwd)/.dep_wrk
 
 kafka_exit_handling() {
 
-	# Extended Exit handling for kafka / zookeeper instances 
+	# Extended Exit handling for kafka / zookeeper instances
 	if [[ "$EXTRA_EXIT" == 'kafka' ]]; then
-		
+
 		echo "stop kafka instance"
 		stop_kafka '.dep_wrk' $1
 
@@ -1664,7 +1680,7 @@ kafka_exit_handling() {
 		stop_zookeeper '.dep_wrk' $1
 	fi
 
-	# Extended Exit handling for kafka / zookeeper instances 
+	# Extended Exit handling for kafka / zookeeper instances
 	if [[ "$EXTRA_EXIT" == 'kafkamulti' ]]; then
 		echo "stop kafka instances"
 		stop_kafka '.dep_wrk1' $1
@@ -1765,7 +1781,7 @@ stop_kafka() {
 				break
 			fi
 		done
-		
+
 		if [[ "$2" == 'true' ]]; then
 			# Process shutdown, do cleanup now
 			cleanup_kafka $1
@@ -1917,7 +1933,7 @@ start_kafka() {
 			mkdir -p $dep_work_dir
 	fi
 	rm -rf $dep_work_dir/kafka
-	( cd $dep_work_dir && 
+	( cd $dep_work_dir &&
 	  tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
 	cp -f $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
 	#if [ "$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')" != "" ]; then
@@ -2202,7 +2218,7 @@ start_elasticsearch() {
 		$TESTTOOL_DIR/msleep 1000
 		(( timeseconds=timeseconds + 1 ))
 
-		if [ "$timeseconds" -gt "$timeoutend" ]; then 
+		if [ "$timeseconds" -gt "$timeoutend" ]; then
 			echo "--- TIMEOUT ( $timeseconds ) reached!!!"
 			if [ ! -d $dep_work_dir/es ]; then
 				echo "ElasticSearch $dep_work_dir/es does not exist, no ElasticSearch debuglog"
@@ -2363,7 +2379,7 @@ omhttp_get_data() {
         fi
 
     fi
-    
+
     omhttp_url="localhost:${omhttp_server_port}/${omhttp_path}"
     curl -s ${omhttp_url} \
         | $PYTHON -c "${python_parse}" | sort -n \
@@ -2470,7 +2486,7 @@ snmp_start_trapreceiver() {
 	   ps -fp $(cat "$1")
 	   snmp_stop_trapreceiver
 	   error_exit 1
-#	else 
+#	else
 #	   echo "waiting...${snmp_server_logfile}..."
 	fi
     done
@@ -2601,8 +2617,8 @@ case $1 in
 		printf '%s Test: %s\n' "$(tb_timestamp)" "$0"
 		printf '%s\n' '------------------------------------------------------------'
 		rm -f xlate*.lkp_tbl
-		rm -f log log* # RSyslog debug output 
-		rm -f work 
+		rm -f log log* # RSyslog debug output
+		rm -f work
 		rm -rf test-logdir stat-file1
 		rm -f rsyslog.empty imfile-state:* omkafka-failed.data
 		rm -f tmp.qi nocert
@@ -2686,7 +2702,7 @@ case $1 in
 		done
 		echo "dyn-stats reset for bucket ${3} registered"
 		;;
-   'assert-first-column-sum-greater-than') 
+   'assert-first-column-sum-greater-than')
 		sum=$(grep $3 <$4| sed -e $2 | awk '{s+=$1} END {print s}')
 		if [ ! $sum -gt $5 ]; then
 		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is smaller than expected lower-limit of "'$5'"
@@ -2695,7 +2711,7 @@ case $1 in
 		    error_exit 1
 		fi
 		;;
-   'content-pattern-check') 
+   'content-pattern-check')
 		grep -q "$2" < ${RSYSLOG_OUT_LOG}
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed, not every line matched pattern "'$2'"
@@ -2710,7 +2726,7 @@ case $1 in
 		    exit 77
 		fi
 		;;
-	'check-inotify') # Check for inotify/fen support 
+	'check-inotify') # Check for inotify/fen support
 		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
 			echo [inotify mode]
 		elif [ -n "$(find /usr/include/sys/ -name 'port.h' -print -quit)" ]; then
@@ -2725,7 +2741,7 @@ case $1 in
 			exit 77 # no inotify available, skip this test
 		fi
 		;;
-	'check-inotify-only') # Check for ONLY inotify support 
+	'check-inotify-only') # Check for ONLY inotify support
 		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
 			echo [inotify mode]
 		else
