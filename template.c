@@ -46,6 +46,7 @@
 #include "rsconf.h"
 #include "msg.h"
 #include "parserif.h"
+#include "ruleset.h"
 #include "unicode-helper.h"
 
 PRAGMA_INGORE_Wswitch_enum
@@ -2137,6 +2138,40 @@ struct template *tplFind(rsconf_t *conf, char *pName, int iLenName)
 	return(pTpl);
 }
 
+void tplDelete(struct template *pTpl)
+{
+	struct templateEntry *pTpe, *pTpeDel;
+	pTpe = pTpl->pEntryRoot;
+	while(pTpe != NULL) {
+		pTpeDel = pTpe;
+		pTpe = pTpe->pNext;
+		switch(pTpeDel->eEntryType) {
+		case UNDEFINED:
+			break;
+		case CONSTANT:
+			free(pTpeDel->data.constant.pConstant);
+			break;
+		case FIELD:
+			/* check if we have a regexp and, if so, delete it */
+#ifdef FEATURE_REGEXP
+			if(pTpeDel->data.field.has_regex != 0) {
+				if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
+					regexp.regfree(&(pTpeDel->data.field.re));
+				}
+			}
+#endif
+			msgPropDescrDestruct(&pTpeDel->data.field.msgProp);
+			break;
+		}
+		free(pTpeDel->fieldName);
+		free(pTpeDel);
+	}
+	free(pTpl->pszName);
+	if(pTpl->bHaveSubtree)
+		msgPropDescrDestruct(&pTpl->subtree);
+	free(pTpl);
+}
+
 /* Destroy the template structure. This is for de-initialization
  * at program end. Everything is deleted.
  * rgerhards 2005-02-22
@@ -2147,41 +2182,12 @@ struct template *tplFind(rsconf_t *conf, char *pName, int iLenName)
 void tplDeleteAll(rsconf_t *conf)
 {
 	struct template *pTpl, *pTplDel;
-	struct templateEntry *pTpe, *pTpeDel;
 
 	pTpl = conf->templates.root;
 	while(pTpl != NULL) {
-		pTpe = pTpl->pEntryRoot;
-		while(pTpe != NULL) {
-			pTpeDel = pTpe;
-			pTpe = pTpe->pNext;
-			switch(pTpeDel->eEntryType) {
-			case UNDEFINED:
-				break;
-			case CONSTANT:
-				free(pTpeDel->data.constant.pConstant);
-				break;
-			case FIELD:
-				/* check if we have a regexp and, if so, delete it */
-#ifdef FEATURE_REGEXP
-				if(pTpeDel->data.field.has_regex != 0) {
-					if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-						regexp.regfree(&(pTpeDel->data.field.re));
-					}
-				}
-#endif
-				msgPropDescrDestruct(&pTpeDel->data.field.msgProp);
-				break;
-			}
-			free(pTpeDel->fieldName);
-			free(pTpeDel);
-		}
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
-		free(pTplDel->pszName);
-		if(pTplDel->bHaveSubtree)
-			msgPropDescrDestruct(&pTplDel->subtree);
-		free(pTplDel);
+		tplDelete(pTplDel);
 	}
 }
 
@@ -2414,6 +2420,134 @@ void tplPrintList(rsconf_t *conf)
 		}
 		pTpl = pTpl->pNext; /* done, go next */
 	}
+}
+
+static int
+templateEntriesEqual(struct templateEntry *pOld, struct templateEntry *pNew)
+{
+	int equal = 1;
+	equal &= NUM_EQUALS(eEntryType);
+	if (equal) {
+		equal &= USTR_EQUALS(fieldName);
+		if (pOld->eEntryType == CONSTANT) {
+			equal &= USTR_EQUALS(data.constant.pConstant);
+		} else if (pOld->eEntryType == FIELD) {
+			equal &=
+				NUM_EQUALS(data.field.iFromPos) &&
+				NUM_EQUALS(data.field.iToPos) &&
+				NUM_EQUALS(data.field.iFieldNr) &&
+				NUM_EQUALS(data.field.has_fields) &&
+				NUM_EQUALS(data.field.field_delim) &&
+				NUM_EQUALS(data.field.eDateFormat) &&
+				NUM_EQUALS(data.field.eCaseConv) &&
+#ifdef FEATURE_REGEXP
+				// TODO add support for regex
+#endif
+#ifdef STRICT_GPLV3
+				NUM_EQUALS(data.field.field_expand) &&
+#endif
+				NUM_EQUALS(data.field.options.bDropCC) &&
+				NUM_EQUALS(data.field.options.bSpaceCC) &&
+				NUM_EQUALS(data.field.options.bEscapeCC) &&
+				NUM_EQUALS(data.field.options.bCompressSP) &&
+				NUM_EQUALS(data.field.options.bDropLastLF) &&
+				NUM_EQUALS(data.field.options.bSecPathDrop) &&
+				NUM_EQUALS(data.field.options.bSecPathReplace) &&
+				NUM_EQUALS(data.field.options.bSPIffNo1stSP) &&
+				NUM_EQUALS(data.field.options.bCSV) &&
+				NUM_EQUALS(data.field.options.bJSON) &&
+				NUM_EQUALS(data.field.options.bJSONf) &&
+				NUM_EQUALS(data.field.options.bJSONr) &&
+				NUM_EQUALS(data.field.options.bJSONfr) &&
+				NUM_EQUALS(data.field.options.bMandatory) &&
+				NUM_EQUALS(data.field.options.bFromPosEndRelative) &&
+				NUM_EQUALS(data.field.options.bFixedWidth) &&
+				NUM_EQUALS(data.field.options.bDateInUTC) &&
+				NUM_EQUALS(data.field.options.dataType) &&
+				NUM_EQUALS(data.field.options.onEmpty);
+		}
+	}
+
+	return equal;
+}
+
+static void
+printTemplateList(rsconf_t *cnf)
+{
+	DBGPRINTF("Template debug:\nroot=%p last=%p lastStatic=%p\n",
+		cnf->templates.root, cnf->templates.last, cnf->templates.lastStatic);
+	for (struct template *template = cnf->templates.root; template != NULL; template = template->pNext) {
+		DBGPRINTF("\t\t(%p - %s)\n", template, template->pszName);
+	}
+}
+
+
+rsRetVal
+reloadTemplates(rsconf_t *pOldConf, rsconf_t *pNewConf)
+{
+	DEFiRet;
+	if (pOldConf == NULL)
+		FINALIZE;
+	printTemplateList(pOldConf);
+	printTemplateList(pNewConf);
+
+	assert(pOldConf->templates.lastStatic != NULL);
+	assert(pNewConf->templates.lastStatic != NULL);
+
+	for (struct template *pOld = pOldConf->templates.root; pOld != NULL; pOld = pOld->pNext) {
+		struct template *pNewPrev = NULL;
+		struct template *pNewNext = pNewConf->templates.root;
+		struct template *pNew;
+
+		while ((pNew = pNewNext) != NULL) {
+			pNewNext = pNewNext->pNext;
+
+			int equal = templatesEqual(pOld, pNew);
+			if (equal) {
+				if (pNew == pNewConf->templates.root)
+					pNewConf->templates.root = pOld;
+				if (pNew == pNewConf->templates.last)
+					pNewConf->templates.last = pOld;
+				if (pNew == pNewConf->templates.lastStatic)
+					pNewConf->templates.lastStatic = pOld;
+				if (pNewPrev)
+					pNewPrev->pNext = pOld;
+				pOld->pNext = pNewNext;
+				tplDelete(pNew);
+				break;
+			}
+			pNewPrev = pNew;
+		}
+	}
+	printTemplateList(pOldConf);
+
+finalize_it:
+	RETiRet;
+}
+
+int
+templatesEqual(struct template *pOld, struct template *pNew)
+{
+	int equal = 1;
+
+	equal &= (strcmp(pOld->pszName, pNew->pszName) == 0);
+	equal &= NUM_EQUALS(bHaveSubtree);
+	equal &= NUM_EQUALS(tpenElements);
+	equal &= NUM_EQUALS(optFormatEscape);
+	equal &= NUM_EQUALS(optCaseSensitive);
+	if (equal) {
+		struct templateEntry *pOldEntry = pOld->pEntryRoot;
+		struct templateEntry *pNewEntry = pNew->pEntryRoot;
+		while (pOldEntry != NULL && pNewEntry != NULL) {
+			int tmp = templateEntriesEqual(pOldEntry, pNewEntry);
+			equal &= tmp;
+			pOldEntry = pOldEntry->pNext;
+			pNewEntry = pNewEntry->pNext;
+		}
+		equal &= (pOldEntry == pNewEntry);
+	}
+
+	return equal;
 }
 
 int tplGetEntryCount(struct template *pTpl)

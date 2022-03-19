@@ -102,6 +102,7 @@ rsRetVal activateRulesetQueues(void);
 int cnfStmtsEqual(struct cnfstmt *pOld, struct cnfstmt *pNew);
 int rulesetsEqual(ruleset_t *pOld, ruleset_t *pNew);
 rsRetVal reloadRulesets(rsconf_t *pOld, rsconf_t *pNew);
+int msgPropDescrtEquals(msgPropDescr_t pOld, msgPropDescr_t pNew);
 
 /* Set a current rule set to already-known pointer */
 #define rulesetSetCurrRulesetPtr(pRuleset) (loadConf->rulesets.pCurr = (pRuleset))

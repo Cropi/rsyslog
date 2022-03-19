@@ -181,6 +181,8 @@ tplToString(struct template *__restrict__ const pTpl,
 
 rsRetVal templateInit(void);
 rsRetVal tplProcessCnf(struct cnfobj *o);
+rsRetVal templatesEqual(struct template *pOld, struct template *pNew);
+int reloadTemplates(rsconf_t *pOld, rsconf_t *pNew);
 
 #endif /* #ifndef TEMPLATE_H_INCLUDED */
 /* vim:set ai:

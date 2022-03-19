@@ -1039,6 +1039,7 @@ activate(rsconf_t *cnf)
 	DEFiRet;
 	rsconf_t *runCnfOld = runConf;
 
+	reloadTemplates(runConf, loadConf);
 	reloadRulesets(runConf, loadConf);
 
 	/* at this point, we "switch" over to the running conf */

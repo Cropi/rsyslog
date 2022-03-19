@@ -646,6 +646,7 @@ actionsEqual(struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
 	int asmp; /* action specific module parameters */
 	int asqp; /* action specific queue parameters */
 	int gap; /* general action parameters */
+	int tlp; /* template list parameters */
 	cfgmodules_etry_t *pOldMod;
 	cfgmodules_etry_t *pNewMod;
 
@@ -685,15 +686,24 @@ actionsEqual(struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
 	asqp = pOld->pQueue == NULL ? pNew->pQueue == NULL : queuesEqual(pOld->pQueue, pNew->pQueue);
 	DBGPRINTF("asip=%d asmp=%d gap=%d asqp=%d\n", asip, asmp, gap, asqp);
 
+	/* compare template list parameters */
+	tlp = NUM_EQUALS(iNumTpls);
+	if (tlp) {
+		for (int i = 0; i < pOld->iNumTpls; i++) {
+			tlp &= templatesEqual(pOld->ppTpl[i], pNew->ppTpl[i]);
+		}
+	}
+
 	return (
 		asip &&
 		asmp &&
 		gap &&
-		asqp
+		asqp &&
+		tlp
 	);
 }
 
-static int
+int
 msgPropDescrtEquals(msgPropDescr_t __attribute__((unused)) pOld, msgPropDescr_t __attribute__((unused)) pNew)
 {
 	int equal = 1;
