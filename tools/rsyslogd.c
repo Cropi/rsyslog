@@ -1772,6 +1772,14 @@ doDynamicCnfReload(void)
 			exit(2);
 		}
 	}
+	/* Check for prohibited changes in global parameters */
+	if ((loadConf->globals.uidDropPriv != runConf->globals.uidDropPriv) ||
+		(loadConf->globals.gidDropPriv != runConf->globals.gidDropPriv)) {
+			fprintf(stderr, "rsyslogd: global(privdrop.user.name) or global(privdrop.user.id) or global"
+			"(privdrop.group.name) or global(privdrop.group.id) change is detected "
+				"but it is not supported during configuration reload.\n"
+				"Restart rsyslogd to apply those changes.\n");
+	}
 	CHKiRet(rsconf.Activate(ourConf));
 
 	if(runConf->globals.bLogStatusMsgs) {
