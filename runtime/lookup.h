@@ -111,5 +111,7 @@ void lookupDoHUP(void);
 rsRetVal lookupReload(lookup_ref_t *pThis, const uchar *stub_value_if_reload_fails);
 uint lookupPendingReloadCount(void);
 rsRetVal lookupClassInit(void);
+rsRetVal reloadLookupTables(rsconf_t *pOldConf, rsconf_t *pNewConf);
+int lookupTablesEqual(lookup_ref_t *pOld, lookup_ref_t *pNew);
 
 #endif /* #ifndef INCLUDED_LOOKUP_H */

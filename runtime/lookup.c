@@ -966,6 +966,49 @@ finalize_it:
 	RETiRet;
 }
 
+int
+lookupTablesEqual(lookup_ref_t *pOld, lookup_ref_t *pNew)
+{
+	assert(pOld != NULL && pNew != NULL);
+	return (
+		USTR_EQUALS(name) &&
+		USTR_EQUALS(filename) &&
+		NUM_EQUALS(reload_on_hup)
+	);
+}
+
+rsRetVal
+reloadLookupTables(rsconf_t *pOldConf, rsconf_t *pNewConf)
+{
+	DEFiRet;
+	if (pOldConf == NULL || pNewConf == NULL)
+		FINALIZE;
+
+	for (lookup_ref_t *pOld = pOldConf->lu_tabs.root; pOld != NULL; pOld = pOld->next) {
+		lookup_ref_t *pNewPrev = NULL;
+		lookup_ref_t *pNewNext = pNewConf->lu_tabs.root;
+		lookup_ref_t *pNew;
+		while ((pNew = pNewNext) != NULL) {
+			pNewNext = pNewNext->next;
+			int equal = lookupTablesEqual(pOld, pNew);
+			if (equal) {
+				if (pNew == pNewConf->lu_tabs.root)
+					pNewConf->lu_tabs.root = pOld;
+				if (pNew == pNewConf->lu_tabs.last)
+					pNewConf->lu_tabs.last = pOld;
+				if (pNewPrev)
+					pNewPrev->next = pOld;
+				pOld->next = pNewNext;
+				lookupRefDestruct(pNew);
+				break;
+			}
+			pNewPrev = pNew;
+		}
+	}
+
+finalize_it:
+	RETiRet;
+}
 
 rsRetVal
 lookupTableDefProcessCnf(struct cnfobj *o)

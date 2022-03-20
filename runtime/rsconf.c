@@ -1039,6 +1039,7 @@ activate(rsconf_t *cnf)
 	DEFiRet;
 	rsconf_t *runCnfOld = runConf;
 
+	reloadLookupTables(runConf, loadConf);
 	reloadPerctileStats(runConf, loadConf);
 	reloadDynamicStats(runConf, loadConf);
 	reloadTemplates(runConf, loadConf);

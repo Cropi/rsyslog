@@ -918,10 +918,9 @@ reloadLookupTablesEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
 		!ustrcmp(pOldStmt->d.s_reload_lookup_table.stub_value,
 			pNewStmt->d.s_reload_lookup_table.stub_value) &&
 		!ustrcmp(pOldStmt->d.s_reload_lookup_table.table_name,
-			pNewStmt->d.s_reload_lookup_table.table_name)
-		// TODO
-		// lookupRefsEqual(pOldStmt->d.s_reload_lookup_table.table,
-		// 	pNewStmt->d.s_reload_lookup_table.table)
+			pNewStmt->d.s_reload_lookup_table.table_name) &&
+		lookupTablesEqual(pOldStmt->d.s_reload_lookup_table.table,
+			pNewStmt->d.s_reload_lookup_table.table)
 	);
 }
 
