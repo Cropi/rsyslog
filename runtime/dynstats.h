@@ -55,7 +55,7 @@ struct dynstats_bucket_s {
 	  accumulator value from this */
 	struct dynstats_ctr_s *survivor_ctrs;
 	htable *survivor_table;
-	
+
 	uint32_t maxCardinality;
 	uint32_t metricCount;
 	pthread_mutex_t mutMetricCount;
@@ -74,10 +74,11 @@ struct dynstats_buckets_s {
 
 rsRetVal dynstats_initCnf(dynstats_buckets_t *b);
 rsRetVal dynstats_processCnf(struct cnfobj *o);
-dynstats_bucket_t * dynstats_findBucket(const uchar* name);
+dynstats_bucket_t * dynstats_findBucket(rsconf_t *cnf, const uchar* name);
 rsRetVal dynstats_inc(dynstats_bucket_t *bucket, uchar* metric);
 void dynstats_destroyAllBuckets(void);
 void dynstats_resetExpired(void);
 rsRetVal dynstatsClassInit(void);
+rsRetVal reloadDynamicStats(rsconf_t *pOldConf, rsconf_t *pNewConf);
 
 #endif /* #ifndef INCLUDED_DYNSTATS_H */

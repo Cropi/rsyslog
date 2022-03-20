@@ -3435,7 +3435,7 @@ initFunc_dyn_stats(struct cnffunc *func)
 	}
 
 	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
-	if((func->funcdata = dynstats_findBucket(cstr)) == NULL) {
+	if((func->funcdata = dynstats_findBucket(loadConf, cstr)) == NULL) {
 		parser_errmsg("dyn-stats bucket '%s' not found", cstr);
 		FINALIZE;
 	}
@@ -5236,7 +5236,7 @@ addMod2List(const int __attribute__((unused)) version, struct scriptFunct *funct
 			parser_errmsg("function %s defined multiple times, second time will be ignored",
 				functArray[i].fname);
 		}
-	i++;
+		i++;
 	}
 	newNode->modFcts = functArray;
 

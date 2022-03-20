@@ -1039,6 +1039,7 @@ activate(rsconf_t *cnf)
 	DEFiRet;
 	rsconf_t *runCnfOld = runConf;
 
+	reloadDynamicStats(runConf, loadConf);
 	reloadTemplates(runConf, loadConf);
 	reloadRulesets(runConf, loadConf);
 
