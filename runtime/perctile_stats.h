@@ -85,5 +85,6 @@ rsRetVal perctile_initCnf(perctile_buckets_t *b);
 perctile_bucket_t* perctile_findBucket(const uchar* name);
 rsRetVal perctile_processCnf(struct cnfobj *cnf);
 rsRetVal perctile_obs(perctile_bucket_t *perctile_bkt, uchar* key, int64_t value);
+rsRetVal reloadPerctileStats(rsconf_t *pOldConf, rsconf_t *pNewConf);
 
 #endif /* #ifndef INCLUDED_PERCTILE_STATS_H */

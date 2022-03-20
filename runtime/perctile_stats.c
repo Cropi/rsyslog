@@ -170,6 +170,55 @@ void perctileBucketsDestruct(void) {
 	}
 }
 
+static int
+perctileStatsEqual(perctile_bucket_t *pOld, perctile_bucket_t *pNew) {
+	assert(pOld != NULL);
+	assert(pNew != NULL);
+	int equal = 1;
+
+	equal &= USTR_EQUALS(name);
+	equal &= USTR_EQUALS(delim);
+	equal &= NUM_EQUALS(perctile_values_count);
+	if (equal) {
+		for (size_t i = 0; i < pOld->perctile_values_count; i++) {
+			equal &= (pOld->perctile_values[i] == pNew->perctile_values[i]);
+		}
+	}
+
+	return equal;
+}
+
+rsRetVal
+reloadPerctileStats(rsconf_t *pOldConf, rsconf_t *pNewConf)
+{
+	DEFiRet;
+	if (pOldConf == NULL || pNewConf == NULL)
+		FINALIZE;
+
+	for (perctile_bucket_t *pOld = pOldConf->perctile_buckets.listBuckets; pOld != NULL; pOld = pOld->next) {
+		perctile_bucket_t *pNewPrev = NULL;
+		perctile_bucket_t *pNewNext = pNewConf->perctile_buckets.listBuckets;
+		perctile_bucket_t *pNew;
+		while ((pNew = pNewNext) != NULL) {
+			pNewNext = pNewNext->next;
+			int equal = perctileStatsEqual(pOld, pNew);
+			if (equal) {
+				if (pNew == pNewConf->perctile_buckets.listBuckets)
+					pNewConf->perctile_buckets.listBuckets = pOld;
+				if (pNewPrev)
+					pNewPrev->next = pOld;
+				pOld->next = pNewNext;
+				perctileBucketDestruct(pNew);
+				break;
+			}
+			pNewPrev = pNew;
+		}
+	}
+
+finalize_it:
+	RETiRet;
+}
+
 static perctile_bucket_t*
 findBucket(perctile_bucket_t *head, const uchar *name) {
 	perctile_bucket_t *pbkt_found = NULL;
