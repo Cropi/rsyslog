@@ -177,6 +177,7 @@ void qqueueDoneLoadCnf(void)
 		free((void*) del->dirname);
 		free((void*) del);
 	}
+	queue_filename_root = NULL;
 }
 
 

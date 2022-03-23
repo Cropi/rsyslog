@@ -106,9 +106,9 @@ AddParserToList(parserList_t **ppListRoot, parser_t *pParser)
 	CHKmalloc(pThis = malloc(sizeof(parserList_t)));
 	pThis->pParser = pParser;
 	pThis->pNext = NULL;
+	pThis->pPrev = NULL;
 
 	if(*ppListRoot == NULL) {
-		pThis->pNext = *ppListRoot;
 		*ppListRoot = pThis;
 	} else {
 		/* find tail first */
@@ -116,6 +116,7 @@ AddParserToList(parserList_t **ppListRoot, parser_t *pParser)
 			/* just search, do nothing else */;
 		/* add at tail */
 		pTail->pNext = pThis;
+		pThis->pPrev = pTail;
 	}
 DBGPRINTF("DDDDD: added parser '%s' to list %p\n", pParser->pName, ppListRoot);
 finalize_it:

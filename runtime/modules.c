@@ -578,7 +578,7 @@ finalize_it:
 static rsRetVal
 doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modInfo_t **pNewModule)
 {
-	rsRetVal localRet;
+	rsRetVal localRet = RS_RET_OK;
 	modInfo_t *pNew = NULL;
 	uchar *pName;
 	strgen_t *pStrgen; /* used for strgen modules */
@@ -598,6 +598,7 @@ doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modInfo_t **pNewModul
 	findModule(name, iNameLen, &pNew);
 	if (pNew != NULL) {
 		*pNewModule = pNew;
+		localRet = RS_RET_MODULE_ALREADY_IN_CONF;
 		FINALIZE;
 	}
 
@@ -870,6 +871,12 @@ finalize_it:
 		if(pNew != NULL)
 			moduleDestruct(pNew);
 		*pNewModule = NULL;
+	} else if (localRet == RS_RET_MODULE_ALREADY_IN_CONF) {
+		if (pNew->eType == eMOD_PARSER) {
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"GetParserName", &GetName));
+			CHKiRet(GetName(&pName));
+			CHKiRet(parserConstructViaModAndName(pNew, pName, NULL));
+		}
 	}
 
 	RETiRet;

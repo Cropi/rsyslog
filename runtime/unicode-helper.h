@@ -37,7 +37,7 @@
 #define CHAR_CONVERT(x) ((char*) (x))
 
 /* Compare values of two instances/configs/queues especially during dynamic config reload */
-#define USTR_EQUALS(var) ((pOld->var == NULL) ? (pNew->var == NULL) : !ustrcmp(pOld->var, pNew->var))
+#define USTR_EQUALS(var) ((pOld->var == NULL) ? (pNew->var == NULL) : (pNew->var != NULL && !ustrcmp(pOld->var, pNew->var)))
 #define NUM_EQUALS(var) (pOld->var == pNew->var)
 
 #endif /* multi-include protection */

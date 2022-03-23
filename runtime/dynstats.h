@@ -49,6 +49,7 @@ struct dynstats_bucket_s {
 	STATSCOUNTER_DEF(ctrPurgeTriggered, mutCtrPurgeTriggered);
 	ctr_t *pPurgeTriggeredCtr;
 	struct dynstats_bucket_s *next; /* linked list ptr */
+	struct dynstats_bucket_s *prev; /* linked list ptr */
 	struct dynstats_ctr_s *ctrs;
 	/*survivor objects are used to keep counter values around for upto unused-ttl duration,
 	  so in case it is accessed within (ttl - 2 * ttl) time-period we can re-store the

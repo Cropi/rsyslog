@@ -982,33 +982,30 @@ CODESTARTfreeCnf
 	}
 ENDfreeCnf
 
-#define USTR_EQUALS(var) ((l->var == NULL) ? (r->var == NULL) : !ustrcmp(l->var, r->var))
-#define INT_EQUALS(var) (l->var == r->var)
-
 /* Compare 2 module confs, return 1 if they equal, otherwise 0 */
 static int
-modulesEqual(const modConfData_t *l, const modConfData_t *r)
+modulesEqual(const modConfData_t *pOld, const modConfData_t *pNew)
 {
-	assert(l != NULL && r != NULL);
+	assert(pOld != NULL && pNew != NULL);
 	return (
-		INT_EQUALS(iTCPSessMax) &&
-		INT_EQUALS(iTCPLstnMax) &&
-		INT_EQUALS(iStrmDrvrMode) &&
-		INT_EQUALS(iStrmDrvrExtendedCertCheck) &&
-		INT_EQUALS(iStrmDrvrSANPreference) &&
-		INT_EQUALS(iStrmTlsVerifyDepth) &&
-		INT_EQUALS(iAddtlFrameDelim) &&
-		INT_EQUALS(maxFrameSize) &&
-		INT_EQUALS(bSuppOctetFram) &&
-		INT_EQUALS(bDisableLFDelim) &&
-		INT_EQUALS(discardTruncatedMsg) &&
-		INT_EQUALS(bUseFlowControl) &&
-		INT_EQUALS(bKeepAlive) &&
-		INT_EQUALS(iKeepAliveIntvl) &&
-		INT_EQUALS(iKeepAliveProbes) &&
-		INT_EQUALS(iKeepAliveTime) &&
-		INT_EQUALS(bEmitMsgOnClose) &&
-		INT_EQUALS(bPreserveCase) &&
+		NUM_EQUALS(iTCPSessMax) &&
+		NUM_EQUALS(iTCPLstnMax) &&
+		NUM_EQUALS(iStrmDrvrMode) &&
+		NUM_EQUALS(iStrmDrvrExtendedCertCheck) &&
+		NUM_EQUALS(iStrmDrvrSANPreference) &&
+		NUM_EQUALS(iStrmTlsVerifyDepth) &&
+		NUM_EQUALS(iAddtlFrameDelim) &&
+		NUM_EQUALS(maxFrameSize) &&
+		NUM_EQUALS(bSuppOctetFram) &&
+		NUM_EQUALS(bDisableLFDelim) &&
+		NUM_EQUALS(discardTruncatedMsg) &&
+		NUM_EQUALS(bUseFlowControl) &&
+		NUM_EQUALS(bKeepAlive) &&
+		NUM_EQUALS(iKeepAliveIntvl) &&
+		NUM_EQUALS(iKeepAliveProbes) &&
+		NUM_EQUALS(iKeepAliveTime) &&
+		NUM_EQUALS(bEmitMsgOnClose) &&
+		NUM_EQUALS(bPreserveCase) &&
 		USTR_EQUALS(gnutlsPriorityString) &&
 		USTR_EQUALS(pszStrmDrvrName) &&
 		USTR_EQUALS(pszStrmDrvrAuthMode) &&
@@ -1016,9 +1013,9 @@ modulesEqual(const modConfData_t *l, const modConfData_t *r)
 		USTR_EQUALS(pszStrmDrvrCAFile) &&
 		USTR_EQUALS(pszStrmDrvrKeyFile) &&
 		USTR_EQUALS(pszStrmDrvrCertFile) &&
-		net.PermittedPeersEqual(l->pPermPeersRoot, r->pPermPeersRoot) &&
+		net.PermittedPeersEqual(pOld->pPermPeersRoot, pNew->pPermPeersRoot) &&
 		/* compare global parameters that might modify the behavior of this module */
-		INT_EQUALS(pConf->globals.iGnuTLSLoglevel) &&
+		NUM_EQUALS(pConf->globals.iGnuTLSLoglevel) &&
 		USTR_EQUALS(pConf->globals.pszDfltNetstrmDrvr) &&
 		USTR_EQUALS(pConf->globals.pszDfltNetstrmDrvrCAF) &&
 		USTR_EQUALS(pConf->globals.pszDfltNetstrmDrvrCertFile) &&
@@ -1028,29 +1025,29 @@ modulesEqual(const modConfData_t *l, const modConfData_t *r)
 
 /* Compare 2 instances, return 1 if they equal, otherwise 0 */
 static int
-instancesEqual(const instanceConf_t *l, const instanceConf_t *r) {
-	assert(l != NULL && r != NULL);
+instancesEqual(const instanceConf_t *pOld, const instanceConf_t *pNew) {
+	assert(pOld != NULL && pNew != NULL);
 	return (
-		INT_EQUALS(iTCPSessMax) &&
-		INT_EQUALS(iTCPLstnMax) &&
-		INT_EQUALS(bSPFramingFix) &&
-		INT_EQUALS(ratelimitBurst) &&
-		INT_EQUALS(iAddtlFrameDelim) &&
-		INT_EQUALS(maxFrameSize) &&
-		INT_EQUALS(bUseFlowControl) &&
-		INT_EQUALS(bDisableLFDelim) &&
-		INT_EQUALS(discardTruncatedMsg) &&
-		INT_EQUALS(bEmitMsgOnClose) &&
-		INT_EQUALS(bPreserveCase) &&
-		INT_EQUALS(iStrmDrvrMode) &&
-		INT_EQUALS(iStrmDrvrExtendedCertCheck) &&
-		INT_EQUALS(iStrmDrvrSANPreference) &&
-		INT_EQUALS(iStrmTlsVerifyDepth) &&
-		INT_EQUALS(bKeepAlive) &&
-		INT_EQUALS(iKeepAliveIntvl) &&
-		INT_EQUALS(iKeepAliveProbes) &&
-		INT_EQUALS(iKeepAliveTime) &&
-		INT_EQUALS(cnf_params->bSuppOctetFram) &&
+		NUM_EQUALS(iTCPSessMax) &&
+		NUM_EQUALS(iTCPLstnMax) &&
+		NUM_EQUALS(bSPFramingFix) &&
+		NUM_EQUALS(ratelimitBurst) &&
+		NUM_EQUALS(iAddtlFrameDelim) &&
+		NUM_EQUALS(maxFrameSize) &&
+		NUM_EQUALS(bUseFlowControl) &&
+		NUM_EQUALS(bDisableLFDelim) &&
+		NUM_EQUALS(discardTruncatedMsg) &&
+		NUM_EQUALS(bEmitMsgOnClose) &&
+		NUM_EQUALS(bPreserveCase) &&
+		NUM_EQUALS(iStrmDrvrMode) &&
+		NUM_EQUALS(iStrmDrvrExtendedCertCheck) &&
+		NUM_EQUALS(iStrmDrvrSANPreference) &&
+		NUM_EQUALS(iStrmTlsVerifyDepth) &&
+		NUM_EQUALS(bKeepAlive) &&
+		NUM_EQUALS(iKeepAliveIntvl) &&
+		NUM_EQUALS(iKeepAliveProbes) &&
+		NUM_EQUALS(iKeepAliveTime) &&
+		NUM_EQUALS(cnf_params->bSuppOctetFram) &&
 		USTR_EQUALS(cnf_params->pszPort) &&
 		USTR_EQUALS(cnf_params->pszAddr) &&
 		USTR_EQUALS(cnf_params->pszLstnPortFileName) &&
@@ -1064,13 +1061,13 @@ instancesEqual(const instanceConf_t *l, const instanceConf_t *r) {
 		USTR_EQUALS(pszStrmDrvrKeyFile) &&
 		USTR_EQUALS(pszStrmDrvrCertFile) &&
 		USTR_EQUALS(gnutlsPriorityString) &&
-		net.PermittedPeersEqual(l->pPermPeersRoot, r->pPermPeersRoot)
+		net.PermittedPeersEqual(pOld->pPermPeersRoot, pNew->pPermPeersRoot)
 		/* TODO compare ruleset */
 	);
 }
 
 #undef USTR_EQUALS
-#undef INT_EQUALS
+#undef NUM_EQUALS
 
 BEGINreloadCnf
 CODESTARTreloadCnf

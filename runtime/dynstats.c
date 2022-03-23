@@ -341,6 +341,7 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 			bkts->list = b;
 		} else {
 			b->next = bkts->list;
+			bkts->list->prev = b;
 			bkts->list = b;
 		}
 		pthread_rwlock_unlock(&bkts->lock);
@@ -462,6 +463,17 @@ dynamicStatsEqual(dynstats_bucket_t *pOld, dynstats_bucket_t *pNew) {
 	);
 }
 
+static void
+unlinkDynStat(rsconf_t *cnf, dynstats_bucket_t *pDynstat)
+{
+	if (cnf->dynstats_buckets.list == pDynstat)
+		cnf->dynstats_buckets.list = cnf->dynstats_buckets.list->next;
+	if (pDynstat->prev)
+		pDynstat->prev->next = pDynstat->next;
+	if (pDynstat->next)
+		pDynstat->next->prev = pDynstat->prev;
+}
+
 rsRetVal
 reloadDynamicStats(rsconf_t *pOldConf, rsconf_t *pNewConf)
 {
@@ -469,26 +481,27 @@ reloadDynamicStats(rsconf_t *pOldConf, rsconf_t *pNewConf)
 	if (pOldConf == NULL || pNewConf == NULL)
 		FINALIZE;
 
-	for (dynstats_bucket_t *pOld = pOldConf->dynstats_buckets.list; pOld != NULL; pOld = pOld->next) {
-		dynstats_bucket_t *pNewPrev = NULL;
-		dynstats_bucket_t *pNewNext = pNewConf->dynstats_buckets.list;
-		dynstats_bucket_t *pNew;
-		while ((pNew = pNewNext) != NULL) {
-			pNewNext = pNewNext->next;
-			int equal = dynamicStatsEqual(pOld, pNew);
+	for (dynstats_bucket_t *pNew = pNewConf->dynstats_buckets.list; pNew != NULL;) {
+		dynstats_bucket_t *pNewAct = pNew;
+		pNew = pNew->next;
+
+		for (dynstats_bucket_t *pOld = pOldConf->dynstats_buckets.list; pOld != NULL; pOld = pOld->next) {
+			int equal = dynamicStatsEqual(pOld, pNewAct);
 			if (equal) {
-				if (pNew == pNewConf->dynstats_buckets.list)
-					pNewConf->dynstats_buckets.list = pOld;
-				if (pNewPrev)
-					pNewPrev->next = pOld;
-				pOld->next = pNewNext;
-				dynstats_destroyBucket(&pNewConf->dynstats_buckets, pNew);
+				unlinkDynStat(pOldConf, pOld);
+				unlinkDynStat(pNewConf, pNewAct);
+
+				pOld->prev = NULL;
+				pOld->next = pNewConf->dynstats_buckets.list;
+				if (pNewConf->dynstats_buckets.list)
+					pNewConf->dynstats_buckets.list->prev = pOld;
+				pNewConf->dynstats_buckets.list = pOld;
+
+				dynstats_destroyBucket(&pNewConf->dynstats_buckets, pNewAct);
 				break;
 			}
-			pNewPrev = pNew;
 		}
 	}
-
 
 finalize_it:
 	RETiRet;

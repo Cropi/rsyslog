@@ -2533,6 +2533,8 @@ int
 templatesEqual(struct template *pOld, struct template *pNew)
 {
 	int equal = 1;
+	if (pOld == NULL || pNew == NULL)
+		return pOld == pNew;
 
 	equal &= (strcmp(pOld->pszName, pNew->pszName) == 0);
 	equal &= NUM_EQUALS(bHaveSubtree);

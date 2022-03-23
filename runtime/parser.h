@@ -28,6 +28,7 @@
 struct parserList_s {
 	parser_t *pParser;
 	parserList_t *pNext;
+	parserList_t *pPrev;
 };
 
 
