@@ -536,6 +536,7 @@ tplConstruct(rsconf_t *conf)
 		conf->templates.root = conf->templates.last = pTpl;
 	} else {
 		conf->templates.last->pNext = pTpl;
+		pTpl->pPrev = conf->templates.last;
 		conf->templates.last = pTpl;
 	}
 
@@ -2476,11 +2477,24 @@ printTemplateList(rsconf_t *cnf)
 {
 	DBGPRINTF("Template debug:\nroot=%p last=%p lastStatic=%p\n",
 		cnf->templates.root, cnf->templates.last, cnf->templates.lastStatic);
-	for (struct template *template = cnf->templates.root; template != NULL; template = template->pNext) {
+	for (struct template *template = cnf->templates.lastStatic->pNext; template != NULL; template = template->pNext) {
 		DBGPRINTF("\t\t(%p - %s)\n", template, template->pszName);
 	}
 }
 
+static void
+unlinkTemplate(rsconf_t *cnf, struct template *pTemplate) {
+	// if (cnf->templates.root == pTemplate)
+	// 	cnf->templates.root = cnf->templates.root->pNext;
+	if (cnf->templates.last == pTemplate)
+		cnf->templates.last = pTemplate->pPrev;
+	// if (cnf->templates.lastStatic == pTemplate)
+	// 	cnf->templates.lastStatic = pTemplatePrev;
+	if (pTemplate->pPrev)
+		pTemplate->pPrev->pNext = pTemplate->pNext;
+	if (pTemplate->pNext)
+		pTemplate->pNext->pPrev = pTemplate->pPrev;
+}
 
 rsRetVal
 reloadTemplates(rsconf_t *pOldConf, rsconf_t *pNewConf)
@@ -2488,38 +2502,28 @@ reloadTemplates(rsconf_t *pOldConf, rsconf_t *pNewConf)
 	DEFiRet;
 	if (pOldConf == NULL)
 		FINALIZE;
-	printTemplateList(pOldConf);
-	printTemplateList(pNewConf);
 
-	assert(pOldConf->templates.lastStatic != NULL);
-	assert(pNewConf->templates.lastStatic != NULL);
+	for (struct template *pNew = pNewConf->templates.lastStatic->pNext; pNew != NULL;) {
+		struct template *pNewAct = pNew;
+		pNew = pNew->pNext;
 
-	for (struct template *pOld = pOldConf->templates.root; pOld != NULL; pOld = pOld->pNext) {
-		struct template *pNewPrev = NULL;
-		struct template *pNewNext = pNewConf->templates.root;
-		struct template *pNew;
-
-		while ((pNew = pNewNext) != NULL) {
-			pNewNext = pNewNext->pNext;
-
-			int equal = templatesEqual(pOld, pNew);
+		for (struct template *pOld = pOldConf->templates.lastStatic->pNext; pOld != NULL; pOld = pOld->pNext) {
+			int equal = templatesEqual(pOld, pNewAct);
 			if (equal) {
-				if (pNew == pNewConf->templates.root)
-					pNewConf->templates.root = pOld;
-				if (pNew == pNewConf->templates.last)
-					pNewConf->templates.last = pOld;
-				if (pNew == pNewConf->templates.lastStatic)
-					pNewConf->templates.lastStatic = pOld;
-				if (pNewPrev)
-					pNewPrev->pNext = pOld;
-				pOld->pNext = pNewNext;
-				tplDelete(pNew);
+				unlinkTemplate(pOldConf, pNewAct);
+				unlinkTemplate(pNewConf, pOld);
+				pOld->pPrev = NULL;
+				pOld->pNext = pNewConf->templates.lastStatic->pNext;
+				if (pNewConf->templates.lastStatic->pNext == NULL) {
+					pNewConf->templates.lastStatic->pNext = pNewConf->templates.last = pOld;
+				} else {
+					pNewConf->templates.lastStatic->pNext->pPrev = pOld;
+					pNewConf->templates.lastStatic->pNext = pOld;
+				}
 				break;
 			}
-			pNewPrev = pNew;
 		}
 	}
-	printTemplateList(pOldConf);
 
 finalize_it:
 	RETiRet;

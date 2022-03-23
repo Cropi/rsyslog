@@ -37,6 +37,7 @@
 
 struct template {
 	struct template *pNext;
+	struct template *pPrev;
 	char *pszName;
 	int iLenName;
 	rsRetVal (*pStrgen)(const smsg_t*const, actWrkrIParams_t *const iparam);
