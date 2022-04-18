@@ -1688,6 +1688,61 @@ freeConfigVars(void)
 	cs.pPermPeers = NULL; /* TODO: fix in older builds! */
 }
 
+BEGINmodulesEqual
+	modConfData_t *pOld = (modConfData_t *)ptrOld;
+	modConfData_t *pNew = (modConfData_t *)ptrNew;
+CODESTARTmodulesEqual
+	return (
+		USTR_EQUALS(tplName)
+	);
+ENDmodulesEqual
+
+BEGINinstancesEqual
+	instanceData *pOld = (instanceData *)ptrOld;
+	instanceData *pNew = (instanceData *)ptrNew;
+CODESTARTinstancesEqual
+	return (
+		STR_EQUALS(target) &&
+		STR_EQUALS(address) &&
+		STR_EQUALS(device) &&
+		STR_EQUALS(port) &&
+		USTR_EQUALS(tplName) &&
+		NUM_EQUALS(protocol) &&
+		STR_EQUALS(networkNamespace) &&
+		NUM_EQUALS(originalNamespace) &&
+		NUM_EQUALS(tcp_framing) &&
+		NUM_EQUALS(tcp_framingDelimiter) &&
+		USTR_EQUALS(pszStrmDrvr) &&
+		USTR_EQUALS(pszStrmDrvrAuthMode) &&
+		USTR_EQUALS(pszStrmDrvrPermitExpiredCerts) &&
+		NUM_EQUALS(iStrmDrvrMode) &&
+		NUM_EQUALS(iStrmDrvrExtendedCertCheck) &&
+		NUM_EQUALS(iStrmDrvrSANPreference) &&
+		NUM_EQUALS(iStrmTlsVerifyDepth) &&
+		USTR_EQUALS(pszStrmDrvrCAFile) &&
+		USTR_EQUALS(pszStrmDrvrKeyFile) &&
+		USTR_EQUALS(pszStrmDrvrCertFile) &&
+		NUM_EQUALS(iRebindInterval) &&
+		NUM_EQUALS(bKeepAlive) &&
+		NUM_EQUALS(iKeepAliveProbes) &&
+		NUM_EQUALS(iKeepAliveIntvl) &&
+		NUM_EQUALS(iKeepAliveTime) &&
+		NUM_EQUALS(iConErrSkip) &&
+		USTR_EQUALS(gnutlsPriorityString) &&
+		NUM_EQUALS(bResendLastOnRecon) &&
+		NUM_EQUALS(bSendToAll) &&
+		NUM_EQUALS(iUDPSendDelay) &&
+		NUM_EQUALS(UDPSendBuf) &&
+		net.PermittedPeersEqual(pOld->pPermPeers, pNew->pPermPeers) &&
+		NUM_EQUALS(compressionLevel) &&
+		NUM_EQUALS(strmCompFlushOnTxEnd) &&
+		NUM_EQUALS(compressionMode) &&
+		NUM_EQUALS(ipfreebind) &&
+		NUM_EQUALS(ratelimitInterval) &&
+		NUM_EQUALS(ratelimitBurst)
+	);
+ENDinstancesEqual
+
 
 BEGINmodExit
 CODESTARTmodExit
@@ -1709,6 +1764,7 @@ CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_confsEqual_QUERIES
 ENDqueryEtryPt
 
 

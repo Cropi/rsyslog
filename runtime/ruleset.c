@@ -653,6 +653,7 @@ actionsEqual(struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
 	/* compare instance parameters */
 	asip =
 		NUM_EQUALS(pMod->eType) && /* both actions are of the same type */
+		USTR_EQUALS(pMod->cnfName) &&
 		pOld->pMod->instancesEqual != NULL &&  /* compare function is available */
 		pOld->pMod->instancesEqual(pOld->pModData, pNew->pModData); /* and they do equal */
 
@@ -662,6 +663,7 @@ actionsEqual(struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
 	asmp =
 		NUM_EQUALS(pMod->eType) && /* both actions are of the same type */
 		pOld->pMod->modulesEqual != NULL &&  /* compare function is available */
+		USTR_EQUALS(pMod->cnfName) &&
 		pOld->pMod->modulesEqual(pOldMod->modCnf , pNewMod->modCnf); /* and they do equal */
 
 	/* compare general action parameters */
@@ -960,12 +962,21 @@ finalize_it:
 	RETiRet;
 }
 
+rsRetVal rulesetDebugPrint(ruleset_t *pRuleset);
+
 int
 rulesetsEqual(ruleset_t *pOld, ruleset_t *pNew)
 {
 	int equal = 1;
 	struct cnfstmt *pOldStmt = pOld->root;
 	struct cnfstmt *pNewStmt = pNew->root;
+	DBGPRINTF("rulesetsEqual: pOld has the following structure:");
+	rulesetDebugPrint(pOld);
+	DBGPRINTF("rulesetsEqual: pOld structure finished\n\n");
+
+	DBGPRINTF("rulesetsEqual: pNew has the following structure:");
+	rulesetDebugPrint(pNew);
+	DBGPRINTF("rulesetsEqual: pNew structure finished\n\n");
 
 	equal &= USTR_EQUALS(pszName);
 	equal &= (pOld->pQueue == NULL) ? (pNew->pQueue == NULL) : queuesEqual(pOld->pQueue, pNew->pQueue);
