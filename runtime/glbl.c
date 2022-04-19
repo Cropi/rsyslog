@@ -964,8 +964,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 void
 glblPrepCnf(void)
 {
-	free(mainqCnfObj);
-	mainqCnfObj = NULL;
+	// free(mainqCnfObj);
+	// mainqCnfObj = NULL;
 	free(cnfparamvals);
 	cnfparamvals = NULL;
 }

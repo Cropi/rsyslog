@@ -1753,7 +1753,7 @@ doDynamicCnfReload(void)
 {
 	DEFiRet;
 	resetErrMsgsFlag();
-	// glblPrepCnf();
+	glblPrepCnf();
 	iRet = rsconf.Load(&ourConf, ConfFile);
 	if((iRet == RS_RET_CONF_FILE_NOT_FOUND) || (iRet == RS_RET_NO_ACTIONS)) {
 		ABORT_FINALIZE(iRet);

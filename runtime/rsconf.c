@@ -827,9 +827,11 @@ tellModulesReloadConfig(void)
 	while(node != NULL) {
 		if (node->pMod->reloadCnf != NULL)
 			node->pMod->reloadCnf();
-		else
+		else {
 			DBGPRINTF("will not dynamically reload config for %s"
 			", because it is not yet implemented\n", node->pMod->pszName);
+			node->canActivate = 0;
+		}
 		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
 	}
 
