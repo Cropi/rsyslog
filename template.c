@@ -2473,16 +2473,6 @@ templateEntriesEqual(struct templateEntry *pOld, struct templateEntry *pNew)
 }
 
 static void
-printTemplateList(rsconf_t *cnf)
-{
-	DBGPRINTF("Template debug:\nroot=%p last=%p lastStatic=%p\n",
-		cnf->templates.root, cnf->templates.last, cnf->templates.lastStatic);
-	for (struct template *template = cnf->templates.lastStatic->pNext; template != NULL; template = template->pNext) {
-		DBGPRINTF("\t\t(%p - %s)\n", template, template->pszName);
-	}
-}
-
-static void
 unlinkTemplate(rsconf_t *cnf, struct template *pTemplate) {
 	// if (cnf->templates.root == pTemplate)
 	// 	cnf->templates.root = cnf->templates.root->pNext;

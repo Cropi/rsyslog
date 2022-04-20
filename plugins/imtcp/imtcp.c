@@ -1047,6 +1047,7 @@ instancesEqual(const instanceConf_t *pOld, const instanceConf_t *pNew) {
 		NUM_EQUALS(iKeepAliveIntvl) &&
 		NUM_EQUALS(iKeepAliveProbes) &&
 		NUM_EQUALS(iKeepAliveTime) &&
+		USTR_EQUALS(pszBindRuleset) &&
 		NUM_EQUALS(cnf_params->bSuppOctetFram) &&
 		USTR_EQUALS(cnf_params->pszPort) &&
 		USTR_EQUALS(cnf_params->pszAddr) &&
@@ -1106,6 +1107,24 @@ CODESTARTreloadCnf
 					loadModConf->act = loadModConf->act->next;
 				unlinkInstance(runModConf, runInst);
 				unlinkInstance(loadModConf, actLoadInst);
+
+				ruleset_t *pRulesetOld = actLoadInst->cnf_params->pRuleset;
+				ruleset_t *pRulesetNew = runInst->cnf_params->pRuleset;
+				if (pRulesetNew == NULL && pRulesetOld == NULL) { /* default ruleset */
+					rulesetGetRuleset(loadModConf->pConf, &pRulesetNew, (uchar *)"RSYSLOG_DefaultRuleset");
+					rulesetGetRuleset(runModConf->pConf, &pRulesetOld, (uchar *)"RSYSLOG_DefaultRuleset");
+				}
+
+				int rsEqual = (
+					(pRulesetOld != NULL && pRulesetNew != NULL) &&
+					(rulesetsEqual(runModConf->pConf, loadModConf->pConf, pRulesetOld, pRulesetNew))
+				);
+				DBGPRINTF("The ruleset the imtcp is assigned to has%s changed, will use the new one.\n",
+					(rsEqual ? " NOT" : ""));
+				if (!rsEqual) {
+					runInst->cnf_params->pRuleset = actLoadInst->cnf_params->pRuleset;
+					runInst->tcpsrv_etry->tcpsrv->pLstnPorts->cnf_params->pRuleset = actLoadInst->cnf_params->pRuleset;
+				}
 
 				runInst->prev = NULL;
 				runInst->next = loadModConf->root;

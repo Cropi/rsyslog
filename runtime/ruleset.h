@@ -99,8 +99,8 @@ rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName
 rsRetVal rulesetOptimizeAll(rsconf_t *conf);
 rsRetVal rulesetProcessCnf(struct cnfobj *o);
 rsRetVal activateRulesetQueues(void);
-int cnfStmtsEqual(struct cnfstmt *pOld, struct cnfstmt *pNew);
-int rulesetsEqual(ruleset_t *pOld, ruleset_t *pNew);
+int cnfStmtsEqual(rsconf_t *pOldConf, rsconf_t *pNewConf, struct cnfstmt *pOld, struct cnfstmt *pNew);
+int rulesetsEqual(rsconf_t *pOldConf, rsconf_t *pNewConf, ruleset_t *pOld, ruleset_t *pNew);
 rsRetVal reloadRulesets(rsconf_t *pOld, rsconf_t *pNew);
 int msgPropDescrtEquals(msgPropDescr_t pOld, msgPropDescr_t pNew);
 

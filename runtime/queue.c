@@ -2339,8 +2339,8 @@ qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the ConstructionFinalizer
 	/* do not modify the queue if it's already running(happens when dynamic config reload is invoked
 	 * and the queue is used in the new config as well)
 	 */
-	if (pThis->isRunning)
-		FINALIZE;
+	// if (pThis->isRunning)
+		// FINALIZE;
 
 	dbgoprint((obj_t*) pThis, "starting queue\n");
 

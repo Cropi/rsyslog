@@ -638,7 +638,7 @@ finalize_it:
 }
 
 static int
-actionsEqual(struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
+actionsEqual(rsconf_t *pOldCnf, rsconf_t *pNewCnf, struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
 {
 	action_t *const pOld = pOldStmt->d.act;
 	action_t *const pNew = pNewStmt->d.act;
@@ -649,7 +649,6 @@ actionsEqual(struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
 	int tlp; /* template list parameters */
 	cfgmodules_etry_t *pOldMod;
 	cfgmodules_etry_t *pNewMod;
-
 	/* compare instance parameters */
 	asip =
 		NUM_EQUALS(pMod->eType) && /* both actions are of the same type */
@@ -658,8 +657,8 @@ actionsEqual(struct cnfstmt *const pOldStmt, struct cnfstmt *const pNewStmt)
 		pOld->pMod->instancesEqual(pOld->pModData, pNew->pModData); /* and they do equal */
 
 	/* compare module parameters */
-	pOldMod = module.FindCfgEtryWithCnfName(runConf, pOld->pMod->pszName, eMOD_OUT);
-	pNewMod = module.FindCfgEtryWithCnfName(loadConf, pNew->pMod->pszName, eMOD_OUT);
+	pOldMod = module.FindCfgEtryWithCnfName(pOldCnf, pOld->pMod->pszName, eMOD_OUT);
+	pNewMod = module.FindCfgEtryWithCnfName(pNewCnf, pNew->pMod->pszName, eMOD_OUT);
 	asmp =
 		NUM_EQUALS(pMod->eType) && /* both actions are of the same type */
 		pOld->pMod->modulesEqual != NULL &&  /* compare function is available */
@@ -852,22 +851,22 @@ indirectCallsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
 }
 
 static int
-callsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+callsEqual(rsconf_t *pOldCnf, rsconf_t *pNewCnf, struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
 {
 	return (
 		!es_strcmp(pOldStmt->d.s_call.name , pNewStmt->d.s_call.name) &&
-		cnfStmtsEqual(pOldStmt->d.s_call.stmt, pNewStmt->d.s_call.stmt) &&
+		cnfStmtsEqual(pOldCnf, pNewCnf, pOldStmt->d.s_call.stmt, pNewStmt->d.s_call.stmt) &&
 		1 /* TODO compare rulesets */
 	);
 }
 
 static int
-ifsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+ifsEqual(rsconf_t *pOldCnf, rsconf_t *pNewCnf, struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
 {
 	return (
 		cnfExprsEqual(pOldStmt->d.s_if.expr, pNewStmt->d.s_if.expr) &&
-		cnfStmtsEqual(pOldStmt->d.s_if.t_then, pNewStmt->d.s_if.t_then) &&
-		cnfStmtsEqual(pOldStmt->d.s_if.t_else, pNewStmt->d.s_if.t_else)
+		cnfStmtsEqual(pOldCnf, pNewCnf, pOldStmt->d.s_if.t_then, pNewStmt->d.s_if.t_then) &&
+		cnfStmtsEqual(pOldCnf, pNewCnf, pOldStmt->d.s_if.t_else, pNewStmt->d.s_if.t_else)
 	);
 }
 
@@ -881,26 +880,26 @@ cnfItrsEqual(struct cnfitr *pOld, struct cnfitr *pNew)
 }
 
 static int
-foreachesEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+foreachesEqual(rsconf_t *pOldCnf, rsconf_t *pNewCnf, struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
 {
 	return (
 		cnfItrsEqual(pOldStmt->d.s_foreach.iter, pNewStmt->d.s_foreach.iter) &&
-		cnfStmtsEqual(pOldStmt->d.s_foreach.body, pNewStmt->d.s_foreach.body)
+		cnfStmtsEqual(pOldCnf, pNewCnf, pOldStmt->d.s_foreach.body, pNewStmt->d.s_foreach.body)
 	);
 }
 
 static int
-prifiltsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+prifiltsEqual(rsconf_t *pOldCnf, rsconf_t *pNewCnf, struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
 {
 	return (
 		memcmp(pOldStmt->d.s_prifilt.pmask, pNewStmt->d.s_prifilt.pmask, LOG_NFACILITIES+1) == 0 &&
-		cnfStmtsEqual(pOldStmt->d.s_prifilt.t_then, pNewStmt->d.s_prifilt.t_then) &&
-		cnfStmtsEqual(pOldStmt->d.s_prifilt.t_else, pNewStmt->d.s_prifilt.t_else)
+		cnfStmtsEqual(pOldCnf, pNewCnf, pOldStmt->d.s_prifilt.t_then, pNewStmt->d.s_prifilt.t_then) &&
+		cnfStmtsEqual(pOldCnf, pNewCnf, pOldStmt->d.s_prifilt.t_else, pNewStmt->d.s_prifilt.t_else)
 	);
 }
 
 static int
-propfiltsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
+propfiltsEqual(rsconf_t *pOldCnf, rsconf_t *pNewCnf, struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
 {
 	return (
 		pOldStmt->d.s_propfilt.operation == pNewStmt->d.s_propfilt.operation &&
@@ -908,8 +907,8 @@ propfiltsEqual(struct cnfstmt *pOldStmt, struct cnfstmt *pNewStmt)
 			cstrGetSzStrNoNULL(pNewStmt->d.s_propfilt.pCSCompValue)) &&
 		pOldStmt->d.s_propfilt.isNegated == pNewStmt->d.s_propfilt.isNegated &&
 		msgPropDescrtEquals(pOldStmt->d.s_propfilt.prop, pNewStmt->d.s_propfilt.prop) &&
-		cnfStmtsEqual(pOldStmt->d.s_propfilt.t_then, pNewStmt->d.s_propfilt.t_then) &&
-		cnfStmtsEqual(pOldStmt->d.s_propfilt.t_else, pNewStmt->d.s_propfilt.t_else)
+		cnfStmtsEqual(pOldCnf, pNewCnf, pOldStmt->d.s_propfilt.t_then, pNewStmt->d.s_propfilt.t_then) &&
+		cnfStmtsEqual(pOldCnf, pNewCnf, pOldStmt->d.s_propfilt.t_else, pNewStmt->d.s_propfilt.t_else)
 	);
 }
 
@@ -948,15 +947,45 @@ reloadRulesets(rsconf_t *pOld, rsconf_t *pNew)
 			pNewRuleset = pNewRulesetNext;
 			iRet = llGetNextElt(&pNew->rulesets.llRulesets, &llNewRulesetNext, (void*)&pNewRulesetNext);
 
-			int equals = rulesetsEqual(pOldRuleset, pNewRuleset);
+			int equals = rulesetsEqual(pOld, pNew, pOldRuleset, pNewRuleset);
 			DBGPRINTF("Rulesets %p(old) and %p(new) do %shave the same content\n", pOldRuleset, pNewRuleset,
 				equals ? "" : "NOT ");
 			if (equals) {
+				if (pOld->rulesets.pDflt == pOldRuleset)
+					pNew->rulesets.pDflt = pOldRuleset;
 				llFindAndDelete(&pNew->rulesets.llRulesets, pNewRuleset->pszName);
 				llPrepend(&pNew->rulesets.llRulesets, pOldRuleset->pszName, pOldRuleset);
 			}
 		} while (iRet == RS_RET_OK);
 	}
+
+	// /* TODO */
+	// linkedListCookie_t llOldRulesetAct;
+	// for (llOldRuleset = pOld->rulesets.llRulesets.pRoot; llOldRuleset != NULL; ) {
+	// 	llOldRulesetAct = llOldRuleset;
+	// 	llOldRuleset = llOldRuleset->pNext;
+
+	// 	int found = 0;
+	// 	llNewRulesetNext = NULL;
+	// 	llGetNextElt(&pNew->rulesets.llRulesets, &llNewRulesetNext, (void*)&pNewRulesetNext);
+	// 	do {
+	// 		pNewRuleset = pNewRulesetNext;
+	// 		iRet = llGetNextElt(&pNew->rulesets.llRulesets, &llNewRulesetNext, (void*)&pNewRulesetNext);
+
+	// 		ruleset_t *tmp = (ruleset_t *)llOldRulesetAct->pData;
+	// 		int equals = rulesetsEqual(tmp, pNewRuleset);
+	// 		DBGPRINTF("Rulesets %p(old) and %p(new) do %shave the same content\n", pOldRuleset, pNewRuleset,
+	// 			equals ? "" : "NOT ");
+	// 		if (equals) {
+	// 			found = 1;
+	// 			break;
+	// 		}
+	// 	} while (iRet == RS_RET_OK);
+
+	// 	if (!found) {
+	// 		llFindAndDelete(&pOld->rulesets.llRulesets, ((ruleset_t *)llOldRulesetAct->pData)->pszName);
+	// 	}
+	// }
 
 finalize_it:
 	RETiRet;
@@ -965,7 +994,7 @@ finalize_it:
 rsRetVal rulesetDebugPrint(ruleset_t *pRuleset);
 
 int
-rulesetsEqual(ruleset_t *pOld, ruleset_t *pNew)
+rulesetsEqual(rsconf_t *pOldCnf, rsconf_t *pNewCnf, ruleset_t *pOld, ruleset_t *pNew)
 {
 	int equal = 1;
 	struct cnfstmt *pOldStmt = pOld->root;
@@ -982,7 +1011,7 @@ rulesetsEqual(ruleset_t *pOld, ruleset_t *pNew)
 	equal &= (pOld->pQueue == NULL) ? (pNew->pQueue == NULL) : queuesEqual(pOld->pQueue, pNew->pQueue);
 	equal &= parserListsEqual(pOld->pParserLst, pNew->pParserLst);
 	while (pOldStmt != NULL && pNewStmt != NULL) {
-		equal &= cnfStmtsEqual(pOldStmt, pNewStmt);
+		equal &= cnfStmtsEqual(pOldCnf, pNewCnf, pOldStmt, pNewStmt);
 		pOldStmt = pOldStmt->next;
 		pNewStmt = pNewStmt->next;
 	}
@@ -992,7 +1021,7 @@ rulesetsEqual(ruleset_t *pOld, ruleset_t *pNew)
 }
 
 int
-cnfStmtsEqual(struct cnfstmt *pOld, struct cnfstmt *pNew)
+cnfStmtsEqual(rsconf_t *pOldCnf, rsconf_t *pNewCnf, struct cnfstmt *pOld, struct cnfstmt *pNew)
 {
 	int equal = 1;
 
@@ -1009,7 +1038,7 @@ cnfStmtsEqual(struct cnfstmt *pOld, struct cnfstmt *pNew)
 		case S_STOP:
 			break;
 		case S_ACT:
-			equal &= actionsEqual(pOld, pNew);
+			equal &= actionsEqual(pOldCnf, pNewCnf, pOld, pNew);
 			break;
 		case S_SET:
 			equal &= setsEqual(pOld, pNew);
@@ -1018,22 +1047,22 @@ cnfStmtsEqual(struct cnfstmt *pOld, struct cnfstmt *pNew)
 			equal &= unsetsEqual(pOld, pNew);
 			break;
 		case S_CALL:
-			equal &= callsEqual(pOld, pNew);
+			equal &= callsEqual(pOldCnf, pNewCnf, pOld, pNew);
 			break;
 		case S_CALL_INDIRECT:
 			equal &= indirectCallsEqual(pOld, pNew);
 			break;
 		case S_IF:
-			equal &= ifsEqual(pOld, pNew);
+			equal &= ifsEqual(pOldCnf, pNewCnf, pOld, pNew);
 			break;
 		case S_FOREACH:
-			equal &= foreachesEqual(pOld, pNew);
+			equal &= foreachesEqual(pOldCnf, pNewCnf, pOld, pNew);
 			break;
 		case S_PRIFILT:
-			equal &= prifiltsEqual(pOld, pNew);
+			equal &= prifiltsEqual(pOldCnf, pNewCnf, pOld, pNew);
 			break;
 		case S_PROPFILT:
-			equal &= propfiltsEqual(pOld, pNew);
+			equal &= propfiltsEqual(pOldCnf, pNewCnf, pOld, pNew);
 			break;
 		case S_RELOAD_LOOKUP_TABLE:
 			equal &= reloadLookupTablesEqual(pOld, pNew);
