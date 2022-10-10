@@ -517,7 +517,7 @@ static rsRetVal initConfVars(void)\
 #define ENDinitConfVars \
 	RETiRet;\
 }
-	
+
 
 /* queryEtryPt()
  */
@@ -1123,6 +1123,24 @@ static rsRetVal doHUPWrkr(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)
 #define CODESTARTdoHUPWrkr
 
 #define ENDdoHUPWrkr \
+	RETiRet;\
+}
+
+/* doCapabilities()
+ * Add additional capabilities as per module request.
+ */
+#define CODEqueryEtryPt_doCapabilities \
+	else if(!strcmp((char*) name, "doCapabilities")) {\
+		*pEtryPoint = doCapabilities;\
+	}
+#define BEGINdoCapabilities \
+static rsRetVal doCapabilities(void)\
+{\
+	DEFiRet;
+
+#define CODESTARTdoCapabilities
+
+#define ENDdoCapabilities \
 	RETiRet;\
 }
 

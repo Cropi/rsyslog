@@ -34,6 +34,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#ifdef ENABLE_LIBCAPNG
+	#include <cap-ng.h>
+#endif
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -743,6 +746,56 @@ finalize_it:
 	RETiRet;
 }
 
+/*
+ * Drop capabilities to the minimal set.
+ */
+static rsRetVal
+dropCapabilities(rsconf_t *cnf)
+{
+	DEFiRet;
+
+#ifdef ENABLE_LIBCAPNG
+	cfgmodules_etry_t *node;
+	capng_clear(CAPNG_SELECT_BOTH);
+
+	/* Core capabilities */
+	CHKiRet(capng_updatev(CAPNG_ADD, CAPNG_EFFECTIVE|CAPNG_PERMITTED,
+		CAP_BLOCK_SUSPEND,
+		CAP_CHOWN,
+		CAP_LEASE,
+		CAP_NET_ADMIN,
+		CAP_PERFMON,
+		CAP_NET_BIND_SERVICE,
+		CAP_SYS_ADMIN,
+		CAP_SYSLOG,
+		-1
+	));
+
+	/* Module specific capabilities */
+	node = module.GetNxtCnfType(cnf, NULL, eMOD_ANY);
+	while(node != NULL) {
+		if(node->pMod->doCapabilities != NULL) {
+			DBGPRINTF("altering the capability set via module %s\n",
+				  node->pMod->pszName);
+			CHKiRet(node->pMod->doCapabilities());
+		}
+		node = module.GetNxtCnfType(cnf, node, eMOD_ANY);
+	}
+
+	CHKiRet(capng_apply(CAPNG_SELECT_BOTH));
+	DBGPRINTF("capabilities were dropped successfully.\n");
+
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		LogError(0, RS_RET_LIBCAPNG_ERR,
+				"could not update the stored capabilities settings(libcap-ng error code=%d)", iRet);
+		iRet = RS_RET_LIBCAPNG_ERR;
+	}
+#endif
+
+	RETiRet;
+}
+
 
 /* tell the rsysog core (including ourselfs) that the config load is done and
  * we need to prepare to move over to activate mode.
@@ -1030,6 +1083,7 @@ activate(rsconf_t *cnf)
 	tellModulesActivateConfigPrePrivDrop();
 
 	CHKiRet(dropPrivileges(cnf));
+	CHKiRet(dropCapabilities(cnf));
 
 	tellModulesActivateConfig();
 	startInputModules();

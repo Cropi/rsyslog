@@ -33,6 +33,9 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <pthread.h>
+#ifdef ENABLE_LIBCAPNG
+	#include <cap-ng.h>
+#endif
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -160,6 +163,13 @@ ENDendCnfLoad
 BEGINcheckCnf
 CODESTARTcheckCnf
 ENDcheckCnf
+
+BEGINdoCapabilities
+CODESTARTdoCapabilities
+#ifdef ENABLE_LIBCAPNG
+	return capng_update(CAPNG_ADD, CAPNG_EFFECTIVE|CAPNG_PERMITTED, CAP_IPC_LOCK);
+#endif
+ENDdoCapabilities
 
 BEGINactivateCnf
 CODESTARTactivateCnf
@@ -505,6 +515,7 @@ CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_doHUPWrkr
+CODEqueryEtryPt_doCapabilities
 ENDqueryEtryPt
 
 

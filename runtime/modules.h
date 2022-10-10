@@ -124,6 +124,7 @@ struct modInfo_s {
 	rsRetVal (*activateCnfPrePrivDrop)(void*Cnf);
 	rsRetVal (*activateCnf)(void*Cnf);	/* make provided config the running conf */
 	rsRetVal (*freeCnf)(void*Cnf);
+	rsRetVal (*doCapabilities)(void);
 	/* end v2 config system specific */
 	union	{
 		struct {/* data for input modules */
