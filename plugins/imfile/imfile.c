@@ -264,6 +264,7 @@ struct modConfData_s {
 				   Must be manually reset to 0 if desired. Helper for
 				   polling mode.
 				 */
+	sbool deleteStateOnFileMove;
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for run process */
@@ -310,7 +311,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "sortfiles", eCmdHdlrBinary, 0 },
 	{ "statefile.directory", eCmdHdlrString, 0 },
 	{ "normalizepath", eCmdHdlrBinary, 0 },
-	{ "mode", eCmdHdlrGetWord, 0 }
+	{ "mode", eCmdHdlrGetWord, 0 },
+	{ "deletestateonfilemove", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -551,11 +553,18 @@ static int
 in_setupWatch(act_obj_t *const act, const int is_file)
 {
 	int wd = -1;
+	int flags;
 	if(runModConf->opMode != OPMODE_INOTIFY)
 		goto done;
 
-	wd = inotify_add_watch(ino_fd, act->name,
-		(is_file) ? IN_MODIFY|IN_DONT_FOLLOW : IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
+	if (is_file)
+		flags = IN_MODIFY|IN_DONT_FOLLOW;
+	else if (runModConf->deleteStateOnFileMove)
+		flags = IN_CREATE|IN_DELETE|IN_MOVED_TO;
+	else
+		flags = IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO;
+
+	wd = inotify_add_watch(ino_fd, act->name, flags);
 	if(wd < 0) {
 		if (errno == EACCES) { /* There is high probability of selinux denial on top-level paths */
 			DBGPRINTF("imfile: permission denied when adding watch for '%s'\n", act->name);
@@ -1059,7 +1068,7 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 		persistStrmState(act);
 		strm.Destruct(&act->pStrm);
 		/* we delete state file after destruct in case strm obj initiated a write */
-		if(is_deleted && !act->in_move && inst->bRMStateOnDel) {
+		if(is_deleted && inst->bRMStateOnDel && (!act->in_move || runModConf->deleteStateOnFileMove)) {
 			DBGPRINTF("act_obj_destroy: deleting state file %s\n", statefn);
 			unlink((char*)statefn);
 		}
@@ -2090,6 +2099,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->timeoutGranularity = 1000; /* default: 1 second */
 	loadModConf->haveReadTimeouts = 0; /* default: no timeout */
 	loadModConf->normalizePath = 1;
+	loadModConf->deleteStateOnFileMove = 0;
 	loadModConf->sortFiles = GLOB_NOSORT;
 	loadModConf->stateFileDirectory = NULL;
 	loadModConf->conf_tree = calloc(sizeof(fs_node_t), 1);
@@ -2149,6 +2159,8 @@ CODESTARTsetModCnf
 			loadModConf->stateFileDirectory = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "normalizepath")) {
 			loadModConf->normalizePath = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "deletestateonfilemove")) {
+			loadModConf->deleteStateOnFileMove = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "mode")) {
 			if(!es_strconstcmp(pvals[i].val.d.estr, "polling"))
 				loadModConf->opMode = OPMODE_POLLING;
@@ -2452,16 +2464,25 @@ in_processEvent(struct inotify_event *ev)
 	DBGPRINTF("in_processEvent process Event %x is_file %d, act->name '%s'\n",
 		ev->mask, etry->act->edge->is_file, etry->act->name);
 
-	if((ev->mask & IN_MOVED_FROM)) {
-		flag_in_move(etry->act->edge->node->edges, ev->name);
-	}
-	if(ev->mask & (IN_MOVED_FROM | IN_MOVED_TO))  {
-		fs_node_walk(etry->act->edge->node, poll_tree);
-	} else if(etry->act->edge->is_file && !(etry->act->is_symlink)) {
-		in_handleFileEvent(ev, etry); // esentially poll_file()!
+	if (!runModConf->deleteStateOnFileMove) {
+		if((ev->mask & IN_MOVED_FROM)) {
+			flag_in_move(etry->act->edge->node->edges, ev->name);
+		}
+		if(ev->mask & (IN_MOVED_FROM | IN_MOVED_TO))  {
+			fs_node_walk(etry->act->edge->node, poll_tree);
+		} else if(etry->act->edge->is_file && !(etry->act->is_symlink)) {
+			in_handleFileEvent(ev, etry); // esentially poll_file()!
+		} else {
+			fs_node_walk(etry->act->edge->node, poll_tree);
+		}
 	} else {
-		fs_node_walk(etry->act->edge->node, poll_tree);
+		if((ev->mask & IN_MODIFY) && etry->act->edge->is_file && !(etry->act->is_symlink)) {
+			in_handleFileEvent(ev, etry); // esentially poll_file()!
+		} else {
+			fs_node_walk(etry->act->edge->node, poll_tree);
+		}
 	}
+
 done:	return;
 }
 
