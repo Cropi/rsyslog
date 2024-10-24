@@ -209,6 +209,8 @@ static rsRetVal openJournal(struct journalContext_s *journalContext) {
 	int r;
 	DEFiRet;
 
+	DBGPRINTF("[%s-1] j=%p reloaded=%d atHead=%d cursor=%s\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor);
+
 	if (journalContext->j) {
 		LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imjournal: opening journal when already opened.\n");
 	}
@@ -221,11 +223,15 @@ static rsRetVal openJournal(struct journalContext_s *journalContext) {
 		iRet = RS_RET_IO_ERROR;
 	}
 	journalContext->atHead = 1;
+
+	DBGPRINTF("[%s-2] j=%p reloaded=%d atHead=%d cursor=%s\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor);
+
 	RETiRet;
 }
 
 /* trySave shoulod only be true if there is no journald error preceeding this call */
 static void closeJournal(struct journalContext_s *journalContext) {
+	DBGPRINTF("[%s] j=%p reloaded=%d atHead=%d cursor=%s\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor);
 	if (!journalContext->j) {
 		LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imjournal: closing NULL journal.\n");
 	}
@@ -369,6 +375,8 @@ updateJournalCursor(struct journalContext_s *journalContext)
 	char *c = NULL;
 	int r;
 
+	DBGPRINTF("[%s-1] journalContext->cursor=%s\n", __func__, journalContext->cursor);
+
 	if ((r = sd_journal_get_cursor(journalContext->j, &c)) < 0) {
 		LogError(-r, RS_RET_ERR, "imjournal: Could not get journald cursor!\n");
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -377,6 +385,8 @@ updateJournalCursor(struct journalContext_s *journalContext)
 	free(journalContext->cursor);
 	journalContext->cursor = c;
 finalize_it:
+	DBGPRINTF("[%s-2] journalContext->cursor=%s iRet=%d\n", __func__, journalContext->cursor, iRet);
+
 	RETiRet;
 }
 
@@ -396,6 +406,7 @@ int sharedJsonProperties, ruleset_t *pBindRuleset)
 
 	assert(msg != NULL);
 	assert(pszTag != NULL);
+	DBGPRINTF("[%s] msg=%s\n", __func__, msg);
 
 	if(tp == NULL) {
 		CHKiRet(msgConstruct(&pMsg));
@@ -678,14 +689,18 @@ handleRotation(struct journalContext_s *journalContext, char* stateFile)
 	DEFiRet;
 	int r;
 
+	DBGPRINTF("[%s-1] j=%p reloaded=%d atHead=%d cursor=%s statefile=%s\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor, stateFile);
+
 	LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal files changed, reloading...\n");
 	STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
-	closeJournal(journalContext);
+	// closeJournal(journalContext);
 
-	iRet = openJournal(journalContext);
-	if (iRet != RS_RET_OK) {
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
+	// iRet = openJournal(journalContext);
+	// if (iRet != RS_RET_OK) {
+	// 	ABORT_FINALIZE(RS_RET_ERR);
+	// }
+
+	DBGPRINTF("[%s-2] j=%p reloaded=%d atHead=%d cursor=%s\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor);
 
 	/* outside error scenarios we should always have a cursor available at this point */
 	if (!journalContext->cursor)
@@ -697,6 +712,7 @@ handleRotation(struct journalContext_s *journalContext, char* stateFile)
 			/* Seek to the very end of the journal and ignore all older messages. */
 			iRet = skipOldMessages(journalContext);
 		}
+		DBGPRINTF("[%s-3] j=%p reloaded=%d atHead=%d cursor=%s iRet=%d\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor, iRet);
 		FINALIZE;
 	}
 
@@ -714,6 +730,7 @@ handleRotation(struct journalContext_s *journalContext, char* stateFile)
 
 finalize_it:
 	journalContext->reloaded = 1;
+	DBGPRINTF("[%s-4] j=%p reloaded=%d atHead=%d cursor=%s iRet=%d\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor, iRet);
 	RETiRet;
 }
 
@@ -726,6 +743,7 @@ pollJournal(struct journalContext_s *journalContext, char* stateFile)
 	int err;
 
 	err = sd_journal_wait(journalContext->j, POLL_TIMEOUT);
+	DBGPRINTF("[%s-1] err=%d reloaded=%d\n", __func__, err, journalContext->reloaded);
 	if (err == SD_JOURNAL_INVALIDATE && !journalContext->reloaded) {
 		CHKiRet(handleRotation(journalContext, stateFile));
 	}
@@ -734,6 +752,8 @@ pollJournal(struct journalContext_s *journalContext, char* stateFile)
 	}
 
 finalize_it:
+	DBGPRINTF("[%s-2] rc=%d\n", __func__, iRet);
+
 	RETiRet;
 }
 
@@ -772,6 +792,8 @@ loadJournalState(struct journalContext_s *journalContext, char* stateFile)
 	DBGPRINTF("Loading journal position, at head? %d, reloaded? %d\n",
 			  journalContext->atHead, journalContext->reloaded);
 
+	DBGPRINTF("[%s-1] j=%p reloaded=%d atHead=%d cursor=%s\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor);
+
 	/* if state file not exists (on very first run), skip */
 	if (access(stateFile, F_OK|R_OK) == -1 && errno == ENOENT) {
 		if (cs.bIgnorePrevious) {
@@ -786,14 +808,18 @@ loadJournalState(struct journalContext_s *journalContext, char* stateFile)
 	if ((r_sf = fopen(stateFile, "rb")) != NULL) {
 		char readCursor[128 + 1];
 		if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
-			if (sd_journal_seek_cursor(journalContext->j, readCursor) != 0) {
+			readCursor[128] = '\0';
+			r = sd_journal_seek_cursor(journalContext->j, readCursor);
+			DBGPRINTF("[%s-2] r=%d\n", __func__, r);
+			if (r != 0) {
 				LogError(0, RS_RET_ERR, "imjournal: "
 					"couldn't seek to cursor `%s'\n", readCursor);
 				iRet = RS_RET_ERR;
 			} else {
 				journalContext->atHead = 0;
 				char * tmp_cursor = NULL;
-				sd_journal_next(journalContext->j);
+				r = sd_journal_next(journalContext->j);
+				DBGPRINTF("[%s-3] r=%d readCursor=%s test=%d\n", __func__, r, readCursor, sd_journal_test_cursor(journalContext->j, readCursor));
 				/*
 				* This is resolving the situation when system is after reboot and boot_id
 				* doesn't match so cursor pointing into "future".
@@ -816,8 +842,12 @@ loadJournalState(struct journalContext_s *journalContext, char* stateFile)
 					}
 					journalContext->atHead = 1;
 				}
+				DBGPRINTF("[%s-4] r=%d test=%d\n", __func__, r, sd_journal_test_cursor(journalContext->j, tmp_cursor));
 				free(tmp_cursor);
+				journalContext->cursor = strdup(readCursor);
+				sd_journal_seek_cursor(journalContext->j, readCursor);
 			}
+			DBGPRINTF("[%s-5] j=%p reloaded=%d atHead=%d cursor=%s test=%d\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor, sd_journal_test_cursor(journalContext->j, readCursor));
 		} else {
 			LogError(0, RS_RET_IO_ERROR, "imjournal: "
 				"fscanf on state file `%s' failed\n", stateFile);
@@ -843,12 +873,16 @@ loadJournalState(struct journalContext_s *journalContext, char* stateFile)
 	}
 
 finalize_it:
+	DBGPRINTF("[%s-6] j=%p reloaded=%d atHead=%d cursor=%s\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor);
 	RETiRet;
 }
 
 static void
 tryRecover(struct journalContext_s *journalContext) {
 	LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from journal error");
+
+	DBGPRINTF("[%s]\n", __func__);
+
 	STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
 	closeJournal(journalContext);
 	srSleep(0, 200000);	// do not hammer machine with too-frequent retries
@@ -927,7 +961,37 @@ doRun(journal_etry_t const* etry)
 	while (glbl.GetGlobalInputTermState() == 0) {
 		int r;
 
+		while ((r = sd_journal_next(etry->journalContext->j)) > 0 && glbl.GetGlobalInputTermState() == 0) {
+			DBGPRINTF("[%s-1] r=%d test=%d\n", __func__, r, sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor));
+
+			if (((r = readjournal(etry->journalContext, etry->pBindRuleset))) != RS_RET_OK) {
+				DBGPRINTF("[%s-2] rc=%d j=%p\n", __func__, r, etry->journalContext->j);
+				tryRecover(etry->journalContext);
+				continue;
+			}
+			etry->journalContext->atHead = 0;
+			if (stateFile)
+			{ /* can't persist without a state file */
+				/* TODO: This could use some finer metric. */
+				if ((count % cs.iPersistStateInterval) == 0)
+				{
+					DBGPRINTF("[%s-3] count=%ld cs.iPersistStateInterval=%d\n", __func__, count, cs.iPersistStateInterval);
+					persistJournalState(etry->journalContext, stateFile);
+				}
+			}
+		}
+		DBGPRINTF("[%s-4] r=%d test=%d\n", __func__, r, sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor));
+
+		r = sd_journal_wait(etry->journalContext->j, POLL_TIMEOUT);
+		DBGPRINTF("[%s-5] r=%d\n", __func__, r);
+		if (r == SD_JOURNAL_INVALIDATE) {
+			CHKiRet(handleRotation(etry->journalContext, stateFile));
+		}
+		continue;
+		// ==============================================
+
 		r = sd_journal_next(etry->journalContext->j);
+		DBGPRINTF("[%s-1] r=%d j=%p atHead=%d test=%d\n", __func__, r, etry->journalContext->j, etry->journalContext->atHead, (etry->journalContext->cursor && etry->journalContext->j) ? sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor) : 123456);
 		if (r < 0) {
 			LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
 			tryRecover(etry->journalContext);
@@ -955,16 +1019,21 @@ doRun(journal_etry_t const* etry)
 			LogError(-e, RS_RET_ERR, "imjournal: sd_get_usage() failed");
 		}
 
-		if (readjournal(etry->journalContext, etry->pBindRuleset) != RS_RET_OK) {
+		int rc;
+		if (((rc = readjournal(etry->journalContext, etry->pBindRuleset))) != RS_RET_OK) {
+			DBGPRINTF("[%s-2] rc=%d j=%p\n", __func__, rc, etry->journalContext->j);
 			tryRecover(etry->journalContext);
 			continue;
 		}
+
+		DBGPRINTF("[%s-3] rc=%d j=%p\n", __func__, rc, etry->journalContext->j);
 
 		count++;
 		etry->journalContext->atHead = 0;
 		if (stateFile) { /* can't persist without a state file */
 			/* TODO: This could use some finer metric. */
 			if ((count % cs.iPersistStateInterval) == 0) {
+				DBGPRINTF("[%s-4] count=%ld cs.iPersistStateInterval=%d\n", __func__, count, cs.iPersistStateInterval);
 				persistJournalState(etry->journalContext, stateFile);
 			}
 		}
@@ -1494,3 +1563,4 @@ CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 /* vim:set ai:
  */
+
