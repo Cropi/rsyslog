@@ -847,7 +847,9 @@ loadJournalState(struct journalContext_s *journalContext, char* stateFile)
 					journalContext->atHead = 1;
 				}
 				DBGPRINTF("[%s-4] r=%d test=%d\n", __func__, r, sd_journal_test_cursor(journalContext->j, tmp_cursor));
-				free(tmp_cursor);
+				// free(tmp_cursor);
+				journalContext->cursor = tmp_cursor;
+				sd_journal_seek_cursor(journalContext->j, readCursor);
 			}
 			DBGPRINTF("[%s-5] j=%p reloaded=%d atHead=%d cursor=%s test=%d\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor, sd_journal_test_cursor(journalContext->j, readCursor));
 		} else {
