@@ -687,7 +687,7 @@ static rsRetVal
 handleRotation(struct journalContext_s *journalContext, char* stateFile)
 {
 	DEFiRet;
-	int r;
+	int r = 0;
 
 	DBGPRINTF("[%s-1] j=%p reloaded=%d atHead=%d cursor=%s statefile=%s\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor, stateFile);
 
@@ -723,14 +723,17 @@ handleRotation(struct journalContext_s *journalContext, char* stateFile)
 	}
 	journalContext->atHead = 0;
 	/* Need to advance because cursor points at last processed message */
-	if ((r = sd_journal_next(journalContext->j)) < 0) {
-		LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
-		iRet = RS_RET_ERR;
-	}
+	// if ((r = sd_journal_next(journalContext->j)) < 0) {
+	// 	LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
+	// 	iRet = RS_RET_ERR;
+	// }
+
+	// r = updateJournalCursor(journalContext);
+	// DBGPRINTF("[%s] r=%d\n", __func__, r);
 
 finalize_it:
 	journalContext->reloaded = 1;
-	DBGPRINTF("[%s-4] j=%p reloaded=%d atHead=%d cursor=%s iRet=%d\n", __func__, journalContext->j, journalContext->reloaded, journalContext->atHead, journalContext->cursor, iRet);
+	DBGPRINTF("[%s-4] j=%p r=%d, reloaded=%d atHead=%d cursor=%s iRet=%d\n", __func__, journalContext->j, r, journalContext->reloaded, journalContext->atHead, journalContext->cursor, iRet);
 	RETiRet;
 }
 
@@ -959,10 +962,21 @@ doRun(journal_etry_t const* etry)
 	 * signalled to do so. This, however, is handled by the framework.
 	 */
 	while (glbl.GetGlobalInputTermState() == 0) {
-		int r;
+		int r = 1;
 
-		while ((r = sd_journal_next(etry->journalContext->j)) > 0 && glbl.GetGlobalInputTermState() == 0) {
-			DBGPRINTF("[%s-1] r=%d test=%d\n", __func__, r, sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor));
+
+		// If sd_journal_next returns 1 it means that we have new data available.at the same time it advances the read pointer into the journal by one entry
+		
+		while ((r = sd_journal_next(etry->journalContext->j)) > 0 && glbl.GetGlobalInputTermState() == 0)
+		{
+			etry->journalContext->reloaded = 0;
+			
+			// 
+			if (r == 1 && sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor) == 1) {
+				continue;
+			}
+
+				DBGPRINTF("[%s-1] r=%d test=%d\n", __func__, r, sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor));
 
 			if (((r = readjournal(etry->journalContext, etry->pBindRuleset))) != RS_RET_OK) {
 				DBGPRINTF("[%s-2] rc=%d j=%p\n", __func__, r, etry->journalContext->j);
