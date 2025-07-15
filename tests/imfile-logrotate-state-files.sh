@@ -4,8 +4,8 @@
 export TESTMESSAGES=1000
 export RETRIES=50
 export TESTMESSAGESFULL=$((3 * $TESTMESSAGES - 1))
-# export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-# export RSYSLOG_DEBUGLOG="log"
+export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+export RSYSLOG_DEBUGLOG="log"
 
 generate_conf
 add_conf '

@@ -812,10 +812,13 @@ detect_updates(fs_edge_t *const edge)
 	int restart = 0;
 
 	for(act = edge->active ; act != NULL ; act = act->next) {
-		DBGPRINTF("detect_updates checking active obj '%s'\n", act->name);
+		DBGPRINTF("detect_updates checking active obj '%s', ino %llu, fd %d\n",
+			act->name, (long long unsigned) act->ino, act->fd);
 		// lstat() has the disadvantage, that we get "deleted" when the name has changed
 		// but inode is still the same (like with logrotate)
 		int r = lstat(act->name, &fileInfo);
+		DBGPRINTF("detect_updates lstat('%s') returned %d, errno %d\n",
+			act->name, r, errno);
 		if(r == -1) { /* object gone away? */
 			/* now let's see if the file itself already exist (e.g. rotated away) */
 			/* NOTE: this will NOT stall the file. The reason is that when a new file
@@ -824,7 +827,9 @@ detect_updates(fs_edge_t *const edge)
 			       e.g. file has been closed, so we will never have old inode (but
 			            why was it closed then? --> check)
 			 */
-			r = fstat(act->ino, &fileInfo);
+			r = fstat(act->fd, &fileInfo);
+			DBGPRINTF("detect_updates fstat('%s') returned %d, errno %d\n",
+				act->name, r, errno);
 			if(r == -1) {
 				time_t ttNow;
 				time(&ttNow);
