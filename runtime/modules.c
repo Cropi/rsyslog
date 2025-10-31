@@ -68,6 +68,45 @@ static modInfo_t *pLoadedModulesLast = NULL; /* tail-pointer */
 /* already dlopen()-ed libs */
 static struct dlhandle_s *pHandles = NULL;
 
+static struct dlhandle_s *findHandleByName(const uchar *const name) {
+    struct dlhandle_s *pHandle;
+
+    for (pHandle = pHandles; pHandle != NULL; pHandle = pHandle->next) {
+        if (!strcmp((const char *)name, (const char *)pHandle->pszName)) {
+            return pHandle;
+        }
+    }
+
+    return NULL;
+}
+
+static rsRetVal rememberHandle(const uchar *const name, void *const pModHdlr) {
+    struct dlhandle_s *pHandle;
+    DEFiRet;
+
+    if (name == NULL || pModHdlr == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    pHandle = findHandleByName(name);
+    if (pHandle != NULL) {
+        pHandle->pModHdlr = pModHdlr;
+        FINALIZE;
+    }
+
+    CHKmalloc(pHandle = malloc(sizeof(*pHandle)));
+    if ((pHandle->pszName = (uchar *)strdup((const char *)name)) == NULL) {
+        free(pHandle);
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    pHandle->pModHdlr = pModHdlr;
+    pHandle->next = pHandles;
+    pHandles = pHandle;
+
+finalize_it:
+    RETiRet;
+}
+
 static uchar *pModDir; /* directory where loadable modules are found */
 
 /* tables for interfacing with the v6 config system */
@@ -517,7 +556,6 @@ static rsRetVal doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modIn
     rsRetVal (*GetName)(uchar **);
     rsRetVal (*modGetType)(eModType_t *pType);
     rsRetVal (*modGetKeepType)(eModKeepType_t *pKeepType);
-    struct dlhandle_s *pHandle = NULL;
     rsRetVal (*getModCnfName)(uchar **cnfName);
     uchar *cnfName;
     DEFiRet;
@@ -754,29 +792,6 @@ static rsRetVal doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modIn
         pNew->eLinkType = eMOD_LINK_STATIC;
     } else {
         pNew->eLinkType = eMOD_LINK_DYNAMIC_LOADED;
-
-        /* if we need to keep the linked module, save it */
-        if (pNew->eKeepType == eMOD_KEEP) {
-            /* see if we have this one already */
-            for (pHandle = pHandles; pHandle; pHandle = pHandle->next) {
-                if (!strcmp((char *)name, (char *)pHandle->pszName)) break;
-            }
-
-            /* not found, create it */
-            if (!pHandle) {
-                if ((pHandle = malloc(sizeof(*pHandle))) == NULL) {
-                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                }
-                if ((pHandle->pszName = (uchar *)strdup((char *)name)) == NULL) {
-                    free(pHandle);
-                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                }
-                pHandle->pModHdlr = pModHdlr;
-                pHandle->next = pHandles;
-
-                pHandles = pHandle;
-            }
-        }
     }
 
     /* we initialized the structure, now let's add it to the linked list of modules */
@@ -1044,6 +1059,7 @@ static rsRetVal ATTR_NONNULL(1) Load(uchar *const pModName, const sbool bConfLoa
     size_t lenPathBuf = sizeof(pathBuf);
     rsRetVal localRet;
     cstr_t *load_err_msg = NULL;
+    sbool bHandleReused = 0;
     DEFiRet;
 
     assert(pModName != NULL);
@@ -1154,16 +1170,16 @@ static rsRetVal ATTR_NONNULL(1) Load(uchar *const pModName, const sbool bConfLoa
         dbgprintf("loading module '%s'\n", pPathBuf);
 
         /* see if we have this one already */
-        for (pHandle = pHandles; pHandle; pHandle = pHandle->next) {
-            if (!strcmp((char *)pModName, (char *)pHandle->pszName)) {
-                pModHdlr = pHandle->pModHdlr;
-                break;
-            }
+        pHandle = findHandleByName(pModName);
+        if (pHandle != NULL) {
+            pModHdlr = pHandle->pModHdlr;
+            bHandleReused = 1;
         }
 
         /* not found, try to dynamically link it */
         if (!pModHdlr) {
             pModHdlr = dlopen((char *)pPathBuf, RTLD_NOW);
+            bHandleReused = 0;
         }
 
         if (pModHdlr == NULL) {
@@ -1190,13 +1206,17 @@ static rsRetVal ATTR_NONNULL(1) Load(uchar *const pModName, const sbool bConfLoa
     }
     if (!(pModInit = (pModInit_t)dlsym(pModHdlr, "modInit"))) {
         LogError(0, RS_RET_MODULE_LOAD_ERR_NO_INIT, "could not load module '%s', dlsym: %s\n", pPathBuf, dlerror());
-        dlclose(pModHdlr);
+        if (!bHandleReused) {
+            dlclose(pModHdlr);
+        }
         ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_NO_INIT);
     }
     if ((iRet = doModInit(pModInit, (uchar *)pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
         LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED, "could not load module '%s', rsyslog error %d\n", pPathBuf,
                  iRet);
-        dlclose(pModHdlr);
+        if (!bHandleReused) {
+            dlclose(pModHdlr);
+        }
         ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_INIT_FAILED);
     }
 
@@ -1213,6 +1233,10 @@ static rsRetVal ATTR_NONNULL(1) Load(uchar *const pModName, const sbool bConfLoa
             pModInfo->bSetModCnfCalled = 1;
         }
         addModToCnfList(&pNew, pLast);
+    }
+
+    if (!bHandleReused && pModInfo != NULL && pModInfo->eKeepType == eMOD_KEEP && pModHdlr != NULL) {
+        CHKiRet(rememberHandle(pModName, pModHdlr));
     }
 
 finalize_it:
@@ -1341,6 +1365,12 @@ BEGINObjClassExit(module, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
     CODESTARTObjClassExit(module);
     /* release objects we no longer need */
     free(pModDir);
+    while (pHandles != NULL) {
+        struct dlhandle_s *pNext = pHandles->next;
+        free(pHandles->pszName);
+        free(pHandles);
+        pHandles = pNext;
+    }
 #ifdef DEBUG
     modUsrPrintAll(); /* debug aid - TODO: integrate with debug.c, at least the settings! */
 #endif
